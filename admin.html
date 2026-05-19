@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>إدارة المنصة | دعوة من قلبك</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'ios-bg': '#F2F2F7', 'ios-blue': '#007AFF', 'ios-green': '#34C759',
+                        'ios-red': '#FF3B30', 'ios-gray': '#8E8E93', 'ios-text': '#1C1C1E',
+                        'ios-purple': '#AF52DE', 'ios-card': '#FFFFFF', 'ios-orange': '#FF9500'
+                    },
+                    boxShadow: { 'ios-sm': '0 1px 2px rgba(0,0,0,0.04)', 'ios': '0 4px 12px rgba(0,0,0,0.05)', 'ios-lg': '0 10px 24px rgba(0,0,0,0.08)' },
+                    animation: {
+                        'slide-up': 'slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'fade-in': 'fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards',
+                        'scale-in': 'scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards'
+                    },
+                    keyframes: {
+                        slideUp: { '0%': { transform: 'translateY(30px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        fadeIn: { '0%': { opacity: '0', transform: 'scale(0.98)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
+                        scaleIn: { '0%': { transform: 'scale(0.9)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1' } }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Tajawal', sans-serif;
+            background-color: #F2F2F7;
+            color: #1C1C1E;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .ios-glass {
+            background: rgba(242, 242, 247, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .ios-card {
+            background: #FFFFFF;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        .ios-input {
+            background: #F2F2F7;
+            border: 1px solid transparent;
+            border-radius: 10px;
+            padding: 12px 16px;
+            transition: all 0.2s ease;
+            width: 100%;
+            outline: none;
+        }
+
+        .ios-input:focus {
+            background: #FFFFFF;
+            border-color: #007AFF;
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
+        }
+
+        .ios-btn {
+            border-radius: 12px;
+            font-weight: 600;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s;
+            cursor: pointer;
+        }
+
+        .ios-btn:active {
+            transform: scale(0.95);
+            opacity: 0.8;
+            transition: transform 0.1s;
+        }
+
+        .hidden-view {
+            display: none !important;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 10px;
+        }
+    </style>
+
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            startup: { pageReady: () => MathJax.startup.defaultPageReady() }
+        };
+        document.addEventListener("DOMContentLoaded", () => {
+            let mjTimeout = null;
+            const observer = new MutationObserver(() => {
+                clearTimeout(mjTimeout);
+                mjTimeout = setTimeout(() => {
+                    if (window.MathJax && window.MathJax.typesetPromise) {
+                        MathJax.typesetPromise().catch(() => {});
+                    }
+                }, 100);
+            });
+            const mainEl = document.querySelector('main') || document.body;
+            observer.observe(mainEl, { childList: true, subtree: true, characterData: true });
+        });
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body class="antialiased selection:bg-ios-blue selection:text-white flex flex-col items-center">
+
+    <!-- Toasts -->
+    <div id="toast"
+        class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] transform -translate-y-20 opacity-0 transition-all duration-400 ease-out flex items-center gap-3 px-5 py-3 rounded-full shadow-ios-lg pointer-events-none">
+        <ion-icon id="toast-icon" name="information-circle" class="text-xl"></ion-icon>
+        <span id="toast-msg" class="font-medium text-sm"></span>
+    </div>
+
+    <!-- Header -->
+    <div id="global-header"
+        class="fixed top-0 left-0 right-0 z-50 ios-glass flex flex-col items-center pb-3 hidden-view">
+        <div class="w-full max-w-5xl px-4 mt-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-ios-text text-white rounded-xl flex items-center justify-center shadow-sm">
+                    <ion-icon name="shield-checkmark" class="text-xl"></ion-icon>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-ios-text leading-none">لوحة التحكم</h1>
+                    <p class="text-[11px] text-ios-gray font-medium mt-1">مدير النظام</p>
+                </div>
+            </div>
+            <button onclick="app.logout()"
+                class="text-ios-red hover:bg-red-50 p-2.5 rounded-full transition-colors flex items-center justify-center bg-white shadow-sm border border-red-100">
+                <ion-icon name="log-out-outline" class="text-2xl"></ion-icon>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="w-full max-w-5xl px-4 min-h-screen pb-20 relative pt-24">
+
+        <!-- Splash / Login -->
+        <div id="view-splash" class="min-h-[80vh] flex flex-col items-center justify-center animate-fade-in pt-0">
+            <div class="w-full max-w-md">
+                <div class="ios-card p-8 animate-scale-in border-t-4 border-t-ios-text">
+                    <div class="text-center mb-8">
+                        <div
+                            class="w-20 h-20 bg-ios-text text-white rounded-3xl flex items-center justify-center shadow-ios-lg mb-6 mx-auto">
+                            <ion-icon name="lock-closed" class="text-4xl"></ion-icon>
+                        </div>
+                        <h2 class="text-2xl font-bold text-ios-text">إدارة المنصة</h2>
+                        <p class="text-ios-gray text-sm mt-2">تسجيل دخول المشرف</p>
+                    </div>
+
+                    <form onsubmit="app.adminLogin(event)">
+                        <div class="mb-6 relative">
+                            <input type="password" id="admin-pin" required placeholder="رمز المرور (PIN)"
+                                class="ios-input text-center text-2xl tracking-[0.5em] font-mono" maxlength="6">
+                            <button type="button"
+                                onclick="document.getElementById('admin-pin').type = document.getElementById('admin-pin').type === 'password' ? 'text' : 'password'"
+                                class="absolute left-3 top-1/2 -translate-y-1/2 text-ios-gray">
+                                <ion-icon name="eye"></ion-icon>
+                            </button>
+                        </div>
+                        <button type="submit"
+                            class="ios-btn w-full bg-ios-text text-white py-4 text-lg shadow-md flex justify-center items-center gap-2 hover:shadow-lg">
+                            دخول <ion-icon name="key"></ion-icon>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="view-admin-dashboard" class="hidden-view animate-fade-in">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-ios-text mb-2">إدارة الامتحانات</h2>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="ui.switchAdminTab('exams')" id="tab-exams"
+                            class="px-4 py-1.5 bg-ios-text text-white rounded-full text-sm font-bold transition-colors">الامتحانات</button>
+                        <button onclick="ui.switchAdminTab('notifications')" id="tab-notifs"
+                            class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300">الإشعارات</button>
+                        <button onclick="ui.switchAdminTab('results')" id="tab-results"
+                            class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300 flex items-center gap-1"><ion-icon name="stats-chart-outline"></ion-icon> نتائج الطلاب</button>
+                        <button onclick="app.openChangePinModal()"
+                            class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300">
+                            <ion-icon name="key-outline"></ion-icon> تغيير الرمز
+                        </button>
+                    </div>
+                </div>
+                <button onclick="ui.switchView('view-admin-exam-form')"
+                    class="ios-btn bg-ios-blue text-white px-6 py-3 shadow-ios flex items-center gap-2">
+                    <ion-icon name="add-circle"></ion-icon> امتحان جديد
+                </button>
+            </div>
+
+            <!-- Exams Tab -->
+            <div id="admin-tab-exams">
+                <div class="ios-card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-100">
+                                    <th class="p-4 text-ios-gray font-medium text-sm">الامتحان</th>
+                                    <th class="p-4 text-ios-gray font-medium text-sm">الأسئلة</th>
+                                    <th class="p-4 text-ios-gray font-medium text-sm">الوقت</th>
+                                    <th class="p-4 text-ios-gray font-medium text-sm text-left">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-exams-list" class="divide-y divide-gray-100">
+                                <!-- Exams injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Tab -->
+            <div id="admin-tab-notifications" class="hidden">
+                <div class="ios-card p-6 mb-6 border-2 border-dashed border-gray-200">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><ion-icon name="send"
+                            class="text-ios-blue"></ion-icon> إرسال إشعار جديد</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <input type="text" id="notif-title" placeholder="عنوان الإشعار (مثال: تنبيه هام)"
+                            class="ios-input md:col-span-1">
+                        <input type="text" id="notif-body" placeholder="نص الإشعار..." class="ios-input md:col-span-2">
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button onclick="app.sendNotification()"
+                            class="ios-btn bg-ios-blue text-white px-8 py-2.5">إرسال للجميع</button>
+                    </div>
+                </div>
+
+                <h3 class="text-lg font-bold mb-4 text-ios-text">الإشعارات السابقة</h3>
+                <div class="space-y-3" id="admin-notifs-list">
+                    <!-- Notifications rendered here -->
+                </div>
+            </div>
+
+            <!-- Results Tab -->
+            <div id="admin-tab-results" class="hidden">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-xl font-bold text-ios-text flex items-center gap-2">
+                        <ion-icon name="people" class="text-ios-purple"></ion-icon>
+                        نتائج الطلاب
+                    </h3>
+                    <button onclick="app.loadResults()" class="ios-btn bg-gray-100 text-ios-gray px-4 py-2 text-sm flex items-center gap-1 hover:bg-gray-200">
+                        <ion-icon name="refresh"></ion-icon> تحديث
+                    </button>
+                </div>
+
+                <!-- Exam filter tabs -->
+                <div id="results-exam-tabs" class="flex flex-wrap gap-2 mb-6 pb-3 border-b border-gray-200">
+                    <!-- Injected by JS -->
+                </div>
+
+                <!-- Results table per exam -->
+                <div id="results-content">
+                    <div class="text-center p-12 text-ios-gray">
+                        <ion-icon name="hourglass-outline" class="text-5xl mb-3 opacity-40"></ion-icon>
+                        <p>جاري تحميل النتائج...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exam Builder -->
+        <div id="view-admin-exam-form" class="hidden-view animate-fade-in max-w-3xl mx-auto">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="ui.switchView('view-admin-dashboard')"
+                    class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-ios-gray hover:text-ios-text">
+                    <ion-icon name="arrow-forward" class="text-xl"></ion-icon>
+                </button>
+                <h2 class="text-2xl font-bold text-ios-text">بناء امتحان جديد</h2>
+            </div>
+
+            <div class="ios-card p-6 md:p-8 mb-6">
+                <h3 class="text-lg font-bold mb-4 text-ios-blue flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-sm">1</div>
+                    البيانات الأساسية
+                </h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-ios-gray mb-1">اسم الامتحان</label>
+                        <input type="text" id="form-exam-title" class="ios-input"
+                            placeholder="مثال: اختبار الشهر الأول">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-ios-gray mb-1">وصف الامتحان</label>
+                        <textarea id="form-exam-desc" class="ios-input resize-none h-20"
+                            placeholder="وصف قصير لما يحتويه التحدي..."></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-ios-gray mb-1">صورة الغلاف (رابط URL)</label>
+                            <input type="url" id="form-exam-cover" class="ios-input" placeholder="https://...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-ios-gray mb-1">الوقت بالدقائق (اختياري)</label>
+                            <input type="number" id="form-exam-time" class="ios-input" placeholder="بدون وقت = فارغ"
+                                min="1">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <input type="checkbox" id="form-exam-random"
+                            class="w-5 h-5 accent-ios-blue rounded cursor-pointer" checked>
+                        <label for="form-exam-random" class="text-sm font-medium cursor-pointer select-none">ترتيب
+                            عشوائي للأسئلة</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ios-card p-6 md:p-8 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-lg font-bold text-ios-purple flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-sm">2</div>
+                        الأسئلة المضافة
+                    </h3>
+                    <span id="draft-questions-count"
+                        class="bg-purple-50 text-ios-purple px-3 py-1 rounded-full text-sm font-bold">0 سؤال</span>
+                </div>
+                <div id="draft-questions-list" class="space-y-4 mb-6">
+                    <!-- Draft questions -->
+                </div>
+
+                <hr class="border-gray-100 mb-6">
+
+                <div class="bg-gray-50 p-5 rounded-2xl border border-gray-200">
+                    <h4 class="font-bold mb-4 flex items-center gap-2 text-ios-text"><ion-icon
+                            name="add-circle"></ion-icon> إضافة سؤال جديد</h4>
+                    <select id="q-type" onchange="app.toggleQuestionTypeFields()"
+                        class="ios-input mb-4 font-medium cursor-pointer bg-white">
+                        <option value="mcq">اختر من متعدد (4 خيارات)</option>
+                        <option value="tf">صح أو خطأ</option>
+                        <option value="essay">سؤال مقالي (تصحيح ذاتي)</option>
+                    </select>
+
+                    <div class="space-y-4">
+                        <textarea id="q-text" class="ios-input resize-none h-24 text-lg"
+                            placeholder="اكتب نص السؤال هنا..."></textarea>
+
+                        <div id="q-mcq-fields"
+                            class="space-y-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <p class="text-xs text-ios-gray font-bold uppercase mb-2">الخيارات (حدد الدائرة للإجابة
+                                الصحيحة)</p>
+                            <!-- Options 1-4 -->
+                            <div class="flex gap-3 items-start">
+                                <input type="radio" name="correct-opt" value="0"
+                                    class="mt-4 w-5 h-5 accent-ios-green cursor-pointer" checked>
+                                <div class="flex-1 space-y-2">
+                                    <input type="text" id="q-opt-0" class="ios-input bg-gray-50 focus:bg-white"
+                                        placeholder="الخيار الأول">
+                                    <input type="text" id="q-exp-0"
+                                        class="ios-input text-sm text-ios-gray bg-gray-50 focus:bg-white"
+                                        placeholder="لماذا هذا الخيار صح/خطأ؟ (اختياري)">
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start">
+                                <input type="radio" name="correct-opt" value="1"
+                                    class="mt-4 w-5 h-5 accent-ios-green cursor-pointer">
+                                <div class="flex-1 space-y-2">
+                                    <input type="text" id="q-opt-1" class="ios-input bg-gray-50 focus:bg-white"
+                                        placeholder="الخيار الثاني">
+                                    <input type="text" id="q-exp-1"
+                                        class="ios-input text-sm text-ios-gray bg-gray-50 focus:bg-white"
+                                        placeholder="تفسير (اختياري)">
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start">
+                                <input type="radio" name="correct-opt" value="2"
+                                    class="mt-4 w-5 h-5 accent-ios-green cursor-pointer">
+                                <div class="flex-1 space-y-2">
+                                    <input type="text" id="q-opt-2" class="ios-input bg-gray-50 focus:bg-white"
+                                        placeholder="الخيار الثالث">
+                                    <input type="text" id="q-exp-2"
+                                        class="ios-input text-sm text-ios-gray bg-gray-50 focus:bg-white"
+                                        placeholder="تفسير (اختياري)">
+                                </div>
+                            </div>
+                            <div class="flex gap-3 items-start">
+                                <input type="radio" name="correct-opt" value="3"
+                                    class="mt-4 w-5 h-5 accent-ios-green cursor-pointer">
+                                <div class="flex-1 space-y-2">
+                                    <input type="text" id="q-opt-3" class="ios-input bg-gray-50 focus:bg-white"
+                                        placeholder="الخيار الرابع">
+                                    <input type="text" id="q-exp-3"
+                                        class="ios-input text-sm text-ios-gray bg-gray-50 focus:bg-white"
+                                        placeholder="تفسير (اختياري)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="q-tf-fields" class="hidden bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <p class="text-xs text-ios-gray font-bold uppercase mb-3">الإجابة الصحيحة هي:</p>
+                            <div class="flex gap-4">
+                                <label
+                                    class="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors [&:has(:checked)]:border-ios-green [&:has(:checked)]:bg-green-50">
+                                    <input type="radio" name="tf-correct" value="true" class="w-5 h-5 accent-ios-green"
+                                        checked>
+                                    <span class="font-bold">صح</span>
+                                </label>
+                                <label
+                                    class="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors [&:has(:checked)]:border-ios-red [&:has(:checked)]:bg-red-50">
+                                    <input type="radio" name="tf-correct" value="false" class="w-5 h-5 accent-ios-red">
+                                    <span class="font-bold">خطأ</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="q-essay-fields"
+                            class="hidden bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                            <p class="text-xs text-ios-gray font-bold uppercase mb-2">الإجابة النموذجية (ستظهر للطالب
+                                للمقارنة)</p>
+                            <textarea id="q-model-answer" class="ios-input resize-none h-24"
+                                placeholder="اكتب الإجابة النموذجية هنا..."></textarea>
+                        </div>
+
+                        <div>
+                            <textarea id="q-general-exp"
+                                class="ios-input resize-none bg-blue-50/50 focus:bg-white border border-blue-100"
+                                placeholder="شرح إضافي عام للسؤال يظهر بعد الإجابة (اختياري)..."></textarea>
+                        </div>
+
+                        <!-- Source Fields -->
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                            <p class="text-xs font-bold text-amber-700 uppercase flex items-center gap-1.5">
+                                <ion-icon name="book-outline" class="text-sm"></ion-icon>
+                                مصادر السؤال والإجابة
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-amber-700 font-medium mb-1">📌 مكان السؤال</label>
+                                    <input type="text" id="q-source-question"
+                                        class="ios-input bg-white border border-amber-200 focus:border-amber-400 text-sm"
+                                        placeholder="مثال: كتاب د. أحمد، ص 12، س 5">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-amber-700 font-medium mb-1">✅ مكان الإجابة</label>
+                                    <input type="text" id="q-source-answer"
+                                        class="ios-input bg-white border border-amber-200 focus:border-amber-400 text-sm"
+                                        placeholder="مثال: كتاب د. أحمد، ص 13، س 2">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="app.addDraftQuestion()"
+                            class="ios-btn w-full bg-gray-800 text-white py-3 mt-2 flex items-center justify-center gap-2">
+                            <ion-icon name="add"></ion-icon> أضف السؤال للمسودة
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="app.saveExam()"
+                class="ios-btn w-full bg-gradient-to-r from-ios-green to-emerald-500 text-white py-4 text-xl shadow-lg flex justify-center items-center gap-2 mb-10 hover:shadow-xl">
+                <ion-icon name="save"></ion-icon> حفظ ونشر الامتحان
+            </button>
+        </div>
+    </main>
+
+    <!-- Custom Confirm Modal -->
+    <div id="modal-custom-confirm"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl transform scale-95 transition-transform duration-300"
+            id="modal-confirm-content">
+            <div class="w-16 h-16 bg-red-50 text-ios-red rounded-full flex items-center justify-center mx-auto mb-4">
+                <ion-icon name="warning" class="text-3xl"></ion-icon>
+            </div>
+            <h3 class="text-xl font-bold mb-2 text-ios-text" id="confirm-title">تأكيد</h3>
+            <p class="text-ios-gray mb-6 text-sm" id="confirm-msg">هل أنت متأكد؟</p>
+            <div class="flex gap-3">
+                <button id="confirm-cancel-btn"
+                    class="ios-btn flex-1 bg-gray-100 hover:bg-gray-200 text-ios-text py-3 rounded-xl font-bold transition-colors">إلغاء</button>
+                <button id="confirm-ok-btn"
+                    class="ios-btn flex-1 bg-ios-red hover:bg-red-600 text-white py-3 rounded-xl font-bold transition-colors">نعم،
+                    متأكد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit/Change Modal -->
+    <div id="modal-edit"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform scale-95 transition-transform duration-300"
+            id="modal-edit-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-ios-text" id="edit-modal-title">تعديل</h3>
+                <button onclick="ui.closeEditModal()"
+                    class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-ios-gray"><ion-icon
+                        name="close"></ion-icon></button>
+            </div>
+            <div id="edit-modal-body" class="space-y-4">
+                <!-- Inputs injected dynamically -->
+            </div>
+            <button id="edit-save-btn" class="ios-btn w-full bg-ios-blue text-white py-3 mt-6">حفظ التغييرات</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc, updateDoc, getDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC950hfJVJYQou-LtcDrlv8fdo2GpEZEu0",
+            authDomain: "noor-9025f.firebaseapp.com",
+            projectId: "noor-9025f",
+            storageBucket: "noor-9025f.firebasestorage.app",
+            messagingSenderId: "300430539406",
+            appId: "1:300430539406:web:74c3e99f988aaa2c5e27df",
+            measurementId: "G-2WCS5YWGXG"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const db = getFirestore(firebaseApp);
+
+        window.appState = { isAdmin: false, draftQuestions: [], exams: [], notifications: [], results: [] };
+
+        window.ui = {
+            switchView: (viewId) => {
+                document.querySelectorAll('main > div').forEach(el => el.classList.add('hidden-view'));
+                const view = document.getElementById(viewId);
+                if (view) { view.classList.remove('hidden-view'); view.style.animation = 'none'; view.offsetHeight; view.style.animation = null; }
+                const header = document.getElementById('global-header');
+                if (viewId !== 'view-splash') header.classList.remove('hidden-view');
+                else header.classList.add('hidden-view');
+            },
+            showToast: (msg, type = 'info') => {
+                const toast = document.getElementById('toast');
+                const icon = document.getElementById('toast-icon');
+                document.getElementById('toast-msg').innerText = msg;
+                toast.className = `fixed top-5 left-1/2 -translate-x-1/2 z-[100] transform transition-all duration-400 ease-out flex items-center gap-3 px-5 py-3 rounded-full shadow-ios-lg`;
+                if (type === 'error') { toast.classList.add('bg-ios-red', 'text-white'); icon.setAttribute('name', 'alert-circle'); }
+                else if (type === 'success') { toast.classList.add('bg-ios-green', 'text-white'); icon.setAttribute('name', 'checkmark-circle'); }
+                else { toast.classList.add('bg-gray-800', 'text-white'); icon.setAttribute('name', 'information-circle'); }
+                toast.classList.remove('-translate-y-20', 'opacity-0');
+                setTimeout(() => { toast.classList.add('-translate-y-20', 'opacity-0'); }, 3000);
+            },
+            confirm: (title, msg, onConfirmCallback) => {
+                const modal = document.getElementById('modal-custom-confirm');
+                document.getElementById('confirm-title').innerText = title;
+                document.getElementById('confirm-msg').innerText = msg;
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('modal-confirm-content').classList.remove('scale-95'); }, 10);
+                const close = () => {
+                    modal.classList.add('opacity-0'); document.getElementById('modal-confirm-content').classList.add('scale-95');
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                };
+                document.getElementById('confirm-cancel-btn').onclick = close;
+                document.getElementById('confirm-ok-btn').onclick = () => { close(); onConfirmCallback(); };
+            },
+            switchAdminTab: (tab) => {
+                document.getElementById('admin-tab-exams').classList.add('hidden');
+                document.getElementById('admin-tab-notifications').classList.add('hidden');
+                document.getElementById('admin-tab-results').classList.add('hidden');
+                const inactiveClass = 'px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300';
+                const activeClass = 'px-4 py-1.5 bg-ios-text text-white rounded-full text-sm font-bold transition-colors';
+                document.getElementById('tab-exams').className = inactiveClass;
+                document.getElementById('tab-notifs').className = inactiveClass;
+                document.getElementById('tab-results').className = inactiveClass + ' flex items-center gap-1';
+
+                if (tab === 'exams') {
+                    document.getElementById('admin-tab-exams').classList.remove('hidden');
+                    document.getElementById('tab-exams').className = activeClass;
+                } else if (tab === 'notifications') {
+                    document.getElementById('admin-tab-notifications').classList.remove('hidden');
+                    document.getElementById('tab-notifs').className = activeClass;
+                } else if (tab === 'results') {
+                    document.getElementById('admin-tab-results').classList.remove('hidden');
+                    document.getElementById('tab-results').className = activeClass + ' flex items-center gap-1';
+                    app.loadResults();
+                }
+            },
+            openEditModal: (title, htmlBody, onSave) => {
+                const modal = document.getElementById('modal-edit');
+                document.getElementById('edit-modal-title').innerText = title;
+                document.getElementById('edit-modal-body').innerHTML = htmlBody;
+                document.getElementById('edit-save-btn').onclick = () => { onSave(); ui.closeEditModal(); };
+                modal.classList.remove('hidden');
+                setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('modal-edit-content').classList.remove('scale-95'); }, 10);
+            },
+            closeEditModal: () => {
+                const modal = document.getElementById('modal-edit');
+                modal.classList.add('opacity-0'); document.getElementById('modal-edit-content').classList.add('scale-95');
+                setTimeout(() => modal.classList.add('hidden'), 300);
+            }
+        };
+
+        window.app = {
+            init: () => {
+                const savedUser = localStorage.getItem('noor_admin');
+                if (savedUser === 'true') {
+                    appState.isAdmin = true;
+                    app.loadAdminData();
+                } else {
+                    ui.switchView('view-splash');
+                }
+            },
+            adminLogin: async (e) => {
+                e.preventDefault();
+                const pin = document.getElementById('admin-pin').value;
+                try {
+                    const docSnap = await getDoc(doc(db, "settings", "admin"));
+                    let correctPin = "123456"; // Default
+                    if (docSnap.exists() && docSnap.data().pin) correctPin = docSnap.data().pin;
+
+                    if (pin === correctPin) {
+                        appState.isAdmin = true;
+                        localStorage.setItem('noor_admin', 'true');
+                        document.getElementById('admin-pin').value = '';
+                        ui.showToast('مرحباً بك في لوحة الإدارة', 'success');
+                        app.loadAdminData();
+                    } else {
+                        ui.showToast('رمز المرور غير صحيح', 'error');
+                    }
+                } catch (error) {
+                    console.error("Login check failed:", error);
+                    if (pin === "123456") { appState.isAdmin = true; localStorage.setItem('noor_admin', 'true'); app.loadAdminData(); }
+                    else ui.showToast('خطأ في الاتصال، حاول بالرمز الافتراضي', 'error');
+                }
+            },
+            logout: () => {
+                localStorage.removeItem('noor_admin');
+                appState.isAdmin = false;
+                ui.switchView('view-splash');
+            },
+            loadAdminData: async () => {
+                ui.showToast('جاري تحميل البيانات...', 'info');
+                try {
+                    const examsSnap = await getDocs(collection(db, "exams"));
+                    appState.exams = []; examsSnap.forEach((doc) => appState.exams.push(doc.data()));
+                    app.renderAdminExams();
+
+                    const notifsSnap = await getDocs(collection(db, "notifications"));
+                    appState.notifications = []; notifsSnap.forEach((doc) => appState.notifications.push(doc.data()));
+                    appState.notifications.sort((a, b) => b.createdAt - a.createdAt);
+                    app.renderAdminNotifs();
+
+                    ui.switchView('view-admin-dashboard');
+                } catch (error) { console.error("Load error:", error); ui.showToast('خطأ في جلب البيانات', 'error'); }
+            },
+            loadResults: async () => {
+                const content = document.getElementById('results-content');
+                const tabsEl = document.getElementById('results-exam-tabs');
+                content.innerHTML = `<div class="text-center p-12 text-ios-gray"><ion-icon name="hourglass-outline" class="text-5xl mb-3 opacity-40"></ion-icon><p>جاري تحميل النتائج...</p></div>`;
+                tabsEl.innerHTML = '';
+                try {
+                    const q = query(collection(db, "results"), orderBy("completedAt", "desc"));
+                    const snap = await getDocs(q);
+                    appState.results = [];
+                    snap.forEach(d => appState.results.push(d.data()));
+                    app.renderAdminResults(null);
+                } catch (error) {
+                    console.error("Results load error:", error);
+                    content.innerHTML = `<div class="text-center p-12 text-ios-red"><ion-icon name="alert-circle-outline" class="text-5xl mb-3"></ion-icon><p>خطأ في تحميل النتائج</p></div>`;
+                }
+            },
+            renderAdminResults: (filterExamId) => {
+                const content = document.getElementById('results-content');
+                const tabsEl = document.getElementById('results-exam-tabs');
+                const results = appState.results;
+
+                if (results.length === 0) {
+                    tabsEl.innerHTML = '';
+                    content.innerHTML = `<div class="text-center p-16 text-ios-gray"><ion-icon name="people-outline" class="text-6xl mb-4 opacity-40"></ion-icon><p class="font-medium">لا توجد نتائج بعد</p><p class="text-sm mt-1">سيظهر هنا الطلاب الذين أكملوا الامتحانات</p></div>`;
+                    return;
+                }
+
+                // Build unique exam list from results
+                const examMap = {};
+                results.forEach(r => { if (!examMap[r.examId]) examMap[r.examId] = r.examTitle; });
+                const examIds = Object.keys(examMap);
+
+                // Build exam filter tabs
+                let tabsHTML = `<button onclick="app.renderAdminResults(null)" class="px-3 py-1.5 rounded-full text-sm font-bold transition-colors ${!filterExamId ? 'bg-ios-purple text-white' : 'bg-gray-100 text-ios-gray hover:bg-gray-200'}">الكل (${results.length})</button>`;
+                examIds.forEach(eid => {
+                    const count = results.filter(r => r.examId === eid).length;
+                    const isActive = filterExamId === eid;
+                    tabsHTML += `<button onclick="app.renderAdminResults('${eid}')" class="px-3 py-1.5 rounded-full text-sm font-bold transition-colors ${isActive ? 'bg-ios-blue text-white' : 'bg-gray-100 text-ios-gray hover:bg-gray-200'}">${examMap[eid]} (${count})</button>`;
+                });
+                tabsEl.innerHTML = tabsHTML;
+
+                // Filter results
+                const filtered = filterExamId ? results.filter(r => r.examId === filterExamId) : results;
+
+                // Group by exam for display
+                if (!filterExamId) {
+                    // Show all grouped by exam
+                    const groups = {};
+                    filtered.forEach(r => {
+                        if (!groups[r.examId]) groups[r.examId] = { title: r.examTitle, items: [] };
+                        groups[r.examId].items.push(r);
+                    });
+                    let html = '';
+                    Object.values(groups).forEach(group => {
+                        html += app._buildResultsTable(group.title, group.items);
+                    });
+                    content.innerHTML = html;
+                } else {
+                    const examTitle = examMap[filterExamId] || 'الامتحان';
+                    content.innerHTML = app._buildResultsTable(examTitle, filtered);
+                }
+            },
+            _buildResultsTable: (examTitle, items) => {
+                const avg = items.length > 0 ? Math.round(items.reduce((s, r) => s + r.percentage, 0) / items.length) : 0;
+                const scoreColor = avg >= 75 ? 'text-ios-green' : avg >= 50 ? 'text-ios-orange' : 'text-ios-red';
+                return `
+                <div class="ios-card overflow-hidden mb-6 animate-slide-up">
+                    <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center flex-wrap gap-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-purple-50 text-ios-purple rounded-xl flex items-center justify-center"><ion-icon name="document-text" class="text-xl"></ion-icon></div>
+                            <div>
+                                <h4 class="font-bold text-ios-text">${examTitle}</h4>
+                                <p class="text-xs text-ios-gray">${items.length} طالب أدى هذا الامتحان</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-center">
+                                <div class="text-xl font-black ${scoreColor}">${avg}%</div>
+                                <div class="text-[10px] text-ios-gray">متوسط الدرجات</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-right border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-100">
+                                    <th class="p-3 text-ios-gray font-medium text-sm">#</th>
+                                    <th class="p-3 text-ios-gray font-medium text-sm">اسم الطالب</th>
+                                    <th class="p-3 text-ios-gray font-medium text-sm">النتيجة</th>
+                                    <th class="p-3 text-ios-gray font-medium text-sm">صح</th>
+                                    <th class="p-3 text-ios-gray font-medium text-sm">خطأ</th>
+                                    <th class="p-3 text-ios-gray font-medium text-sm">التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-50">
+                                ${items.map((r, i) => {
+                                    const pct = r.percentage || 0;
+                                    const pctColor = pct >= 75 ? 'bg-green-100 text-ios-green' : pct >= 50 ? 'bg-orange-100 text-ios-orange' : 'bg-red-100 text-ios-red';
+                                    const date = new Date(r.completedAt).toLocaleString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                    return `<tr class="hover:bg-gray-50/50 transition-colors">
+                                        <td class="p-3 text-xs text-ios-gray font-mono">${i + 1}</td>
+                                        <td class="p-3 font-bold text-ios-text">
+                                            <div class="flex items-center gap-2">
+                                                <div class="w-7 h-7 bg-gradient-to-br from-blue-400 to-purple-500 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">${(r.userName || '؟')[0]}</div>
+                                                ${r.userName || 'غير معروف'}
+                                            </div>
+                                        </td>
+                                        <td class="p-3"><span class="px-2.5 py-1 rounded-full text-sm font-bold ${pctColor}">${pct}%</span></td>
+                                        <td class="p-3 text-ios-green font-bold">${r.correct ?? '-'}</td>
+                                        <td class="p-3 text-ios-red font-bold">${r.wrong ?? '-'}</td>
+                                        <td class="p-3 text-xs text-ios-gray" dir="ltr">${date}</td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            },
+            renderAdminExams: () => {
+                const list = document.getElementById('admin-exams-list');
+                if (appState.exams.length === 0) {
+                    list.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-ios-gray">لا توجد امتحانات، ابدأ بإنشاء امتحان جديد.</td></tr>`; return;
+                }
+                list.innerHTML = appState.exams.sort((a, b) => b.createdAt - a.createdAt).map(ex => `
+                    <tr class="hover:bg-gray-50/50 transition-colors">
+                        <td class="p-4 font-bold text-ios-text">${ex.title}</td>
+                        <td class="p-4"><span class="bg-blue-50 text-ios-blue px-2 py-1 rounded text-xs font-bold">${ex.questions.length} أسئلة</span></td>
+                        <td class="p-4 text-sm text-ios-gray">${ex.timeLimit ? ex.timeLimit + ' دقيقة' : 'مفتوح'}</td>
+                        <td class="p-4">
+                            <button onclick="app.deleteExam('${ex.id}')" class="text-ios-red hover:bg-red-50 p-2 rounded-lg transition-colors inline-flex"><ion-icon name="trash" class="text-xl"></ion-icon></button>
+                        </td>
+                    </tr>
+                `).join('');
+            },
+            deleteExam: (id) => {
+                ui.confirm('حذف الامتحان', 'هل أنت متأكد من حذف هذا الامتحان نهائياً؟', async () => {
+                    try {
+                        await deleteDoc(doc(db, "exams", id));
+                        appState.exams = appState.exams.filter(e => e.id !== id);
+                        app.renderAdminExams();
+                        ui.showToast('تم الحذف بنجاح', 'success');
+                    } catch (e) { ui.showToast('حدث خطأ أثناء الحذف', 'error'); }
+                });
+            },
+            toggleQuestionTypeFields: () => {
+                const type = document.getElementById('q-type').value;
+                document.getElementById('q-mcq-fields').classList.add('hidden');
+                document.getElementById('q-tf-fields').classList.add('hidden');
+                document.getElementById('q-essay-fields').classList.add('hidden');
+                if (type === 'mcq') document.getElementById('q-mcq-fields').classList.remove('hidden');
+                else if (type === 'tf') document.getElementById('q-tf-fields').classList.remove('hidden');
+                else document.getElementById('q-essay-fields').classList.remove('hidden');
+            },
+            addDraftQuestion: () => {
+                const type = document.getElementById('q-type').value;
+                const text = document.getElementById('q-text').value.trim();
+                const exp = document.getElementById('q-general-exp').value.trim();
+                const sourceQ = document.getElementById('q-source-question').value.trim();
+                const sourceA = document.getElementById('q-source-answer').value.trim();
+                if (!text) { ui.showToast('يرجى كتابة نص السؤال', 'error'); return; }
+
+                let qObj = { id: 'q_' + Date.now() + Math.random().toString(36).substr(2, 5), type, text, explanation: exp, sourceQuestion: sourceQ, sourceAnswer: sourceA };
+
+                if (type === 'mcq') {
+                    const opts = [];
+                    for (let i = 0; i < 4; i++) {
+                        const optText = document.getElementById(`q-opt-${i}`).value.trim();
+                        if (!optText) { ui.showToast('يرجى تعبئة جميع الخيارات الأربعة', 'error'); return; }
+                        opts.push({ text: optText, explanation: document.getElementById(`q-exp-${i}`).value.trim() });
+                    }
+                    qObj.options = opts;
+                    qObj.correctIndex = parseInt(document.querySelector('input[name="correct-opt"]:checked').value);
+                } else if (type === 'tf') {
+                    qObj.isTrue = document.querySelector('input[name="tf-correct"]:checked').value === 'true';
+                } else {
+                    const modelAns = document.getElementById('q-model-answer').value.trim();
+                    if (!modelAns) { ui.showToast('يرجى كتابة الإجابة النموذجية', 'error'); return; }
+                    qObj.modelAnswer = modelAns;
+                }
+
+                appState.draftQuestions.push(qObj);
+                app.renderDraftQuestions();
+                ui.showToast('تم إضافة السؤال للمسودة', 'success');
+
+                // Clear Form
+                document.getElementById('q-text').value = ''; document.getElementById('q-general-exp').value = '';
+                document.getElementById('q-source-question').value = ''; document.getElementById('q-source-answer').value = '';
+                if (type === 'mcq') { for (let i = 0; i < 4; i++) { document.getElementById(`q-opt-${i}`).value = ''; document.getElementById(`q-exp-${i}`).value = ''; } }
+                if (type === 'essay') document.getElementById('q-model-answer').value = '';
+            },
+            renderDraftQuestions: () => {
+                const list = document.getElementById('draft-questions-list');
+                const count = document.getElementById('draft-questions-count');
+                count.innerText = `${appState.draftQuestions.length} سؤال`;
+
+                if (appState.draftQuestions.length === 0) {
+                    list.innerHTML = `<div class="text-center p-6 bg-gray-50 border border-dashed border-gray-300 rounded-xl text-ios-gray">لم يتم إضافة أسئلة بعد</div>`;
+                    return;
+                }
+
+                list.innerHTML = appState.draftQuestions.map((q, index) => {
+                    let details = '';
+                    if (q.type === 'mcq') details = `<div class="mt-2 space-y-1">${q.options.map((o, i) => `<div class="text-sm flex items-center gap-2 ${i === q.correctIndex ? 'text-ios-green font-bold' : 'text-ios-gray'}"><ion-icon name="${i === q.correctIndex ? 'checkmark-circle' : 'ellipse-outline'}"></ion-icon> ${o.text}</div>`).join('')}</div>`;
+                    else if (q.type === 'tf') details = `<div class="mt-2 text-sm font-bold text-ios-blue">الإجابة الصحيحة: ${q.isTrue ? 'صح' : 'خطأ'}</div>`;
+                    else details = `<div class="mt-2 text-sm text-ios-gray border-r-2 border-ios-purple pr-2 bg-purple-50 p-2 rounded">نموذج: ${q.modelAnswer}</div>`;
+
+                    const sourceBadges = [
+                        q.sourceQuestion ? `<span class="inline-flex items-center gap-1 text-[11px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full"><ion-icon name="location-outline"></ion-icon> س: ${q.sourceQuestion}</span>` : '',
+                        q.sourceAnswer ? `<span class="inline-flex items-center gap-1 text-[11px] bg-green-50 text-ios-green border border-green-200 px-2 py-0.5 rounded-full"><ion-icon name="checkmark-circle-outline"></ion-icon> ج: ${q.sourceAnswer}</span>` : ''
+                    ].filter(Boolean).join('');
+
+                    return `
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm relative group">
+                        <div class="absolute top-3 left-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="app.removeDraftQuestion('${q.id}')" class="w-8 h-8 bg-red-50 text-ios-red rounded-lg flex items-center justify-center hover:bg-ios-red hover:text-white transition-colors"><ion-icon name="trash"></ion-icon></button>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-gray-100 text-ios-text font-bold rounded-lg flex items-center justify-center shrink-0 mt-1">${index + 1}</div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-ios-text text-lg pr-10">${q.text}</h4>
+                                ${details}
+                                ${sourceBadges ? `<div class="mt-2.5 flex flex-wrap gap-1.5">${sourceBadges}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>`
+                }).join('');
+            },
+            removeDraftQuestion: (id) => { appState.draftQuestions = appState.draftQuestions.filter(q => q.id !== id); app.renderDraftQuestions(); },
+            saveExam: async () => {
+                const title = document.getElementById('form-exam-title').value.trim();
+                const desc = document.getElementById('form-exam-desc').value.trim();
+                const cover = document.getElementById('form-exam-cover').value.trim();
+                const time = document.getElementById('form-exam-time').value;
+                const isRandom = document.getElementById('form-exam-random').checked;
+
+                if (!title || !desc) { ui.showToast('يرجى كتابة اسم ووصف الامتحان', 'error'); return; }
+                if (appState.draftQuestions.length === 0) { ui.showToast('يجب إضافة سؤال واحد على الأقل', 'error'); return; }
+
+                const btn = document.querySelector('button[onclick="app.saveExam()"]');
+                btn.innerHTML = `<ion-icon name="sync" class="animate-spin text-2xl"></ion-icon> جاري الحفظ...`; btn.disabled = true;
+
+                const examObj = {
+                    id: 'exam_' + Date.now() + Math.random().toString(36).substr(2, 5),
+                    title, desc, coverImage: cover, timeLimit: time ? parseInt(time) : null, randomize: isRandom,
+                    questions: appState.draftQuestions, createdAt: Date.now()
+                };
+
+                try {
+                    await setDoc(doc(db, "exams", examObj.id), examObj);
+                    ui.showToast('تم حفظ الامتحان بنجاح!', 'success');
+
+                    // Reset
+                    document.getElementById('form-exam-title').value = ''; document.getElementById('form-exam-desc').value = '';
+                    document.getElementById('form-exam-cover').value = ''; document.getElementById('form-exam-time').value = '';
+                    appState.draftQuestions = []; app.renderDraftQuestions();
+
+                    app.loadAdminData(); // Reload to show in list
+                } catch (error) {
+                    console.error(error); ui.showToast('خطأ في الحفظ السحابي', 'error');
+                } finally {
+                    btn.innerHTML = `<ion-icon name="save"></ion-icon> حفظ ونشر الامتحان`; btn.disabled = false;
+                }
+            },
+            // Notification Logic
+            renderAdminNotifs: () => {
+                const list = document.getElementById('admin-notifs-list');
+                if (appState.notifications.length === 0) { list.innerHTML = '<div class="text-center p-6 text-ios-gray bg-white rounded-xl border border-gray-100">لا توجد إشعارات مرسلة.</div>'; return; }
+                list.innerHTML = appState.notifications.map(n => `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-ios-text">${n.title}</h4>
+                            <p class="text-sm text-ios-gray">${n.body}</p>
+                            <span class="text-[10px] text-gray-400 mt-1 block" dir="ltr">${new Date(n.createdAt).toLocaleString('ar-EG')}</span>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="app.editNotification('${n.id}')" class="w-8 h-8 bg-blue-50 text-ios-blue rounded-full flex items-center justify-center hover:bg-ios-blue hover:text-white transition-colors"><ion-icon name="pencil"></ion-icon></button>
+                            <button onclick="app.deleteNotification('${n.id}')" class="w-8 h-8 bg-red-50 text-ios-red rounded-full flex items-center justify-center hover:bg-ios-red hover:text-white transition-colors"><ion-icon name="trash"></ion-icon></button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+            sendNotification: async () => {
+                const title = document.getElementById('notif-title').value.trim();
+                const body = document.getElementById('notif-body').value.trim();
+                if (!title || !body) { ui.showToast('أدخل العنوان والنص', 'error'); return; }
+                const notif = { id: 'notif_' + Date.now(), title, body, createdAt: Date.now() };
+                try {
+                    await setDoc(doc(db, "notifications", notif.id), notif);
+                    document.getElementById('notif-title').value = ''; document.getElementById('notif-body').value = '';
+                    ui.showToast('تم الإرسال', 'success');
+                    appState.notifications.unshift(notif); app.renderAdminNotifs();
+                } catch (e) { ui.showToast('فشل الإرسال', 'error'); }
+            },
+            deleteNotification: (id) => {
+                ui.confirm('حذف إشعار', 'هل أنت متأكد من حذف هذا الإشعار؟ سيختفي من عند الطلاب.', async () => {
+                    try {
+                        await deleteDoc(doc(db, "notifications", id));
+                        appState.notifications = appState.notifications.filter(n => n.id !== id);
+                        app.renderAdminNotifs(); ui.showToast('تم الحذف', 'success');
+                    } catch (e) { ui.showToast('خطأ بالحذف', 'error'); }
+                });
+            },
+            editNotification: (id) => {
+                const notif = appState.notifications.find(n => n.id === id);
+                if (!notif) return;
+                const html = `
+                    <input type="text" id="edit-n-title" class="ios-input w-full mb-3" value="${notif.title}">
+                    <textarea id="edit-n-body" class="ios-input w-full resize-none h-24">${notif.body}</textarea>
+                `;
+                ui.openEditModal('تعديل الإشعار', html, async () => {
+                    const nt = document.getElementById('edit-n-title').value.trim();
+                    const nb = document.getElementById('edit-n-body').value.trim();
+                    if (nt && nb) {
+                        try {
+                            await updateDoc(doc(db, "notifications", id), { title: nt, body: nb });
+                            notif.title = nt; notif.body = nb; app.renderAdminNotifs();
+                            ui.showToast('تم التعديل بنجاح', 'success');
+                        } catch (e) { ui.showToast('فشل التعديل', 'error'); }
+                    }
+                });
+            },
+            openChangePinModal: () => {
+                const html = `
+                    <input type="password" id="new-pin" class="ios-input w-full mb-3 text-center tracking-widest font-mono" placeholder="الرمز الجديد (أرقام فقط)" maxlength="6">
+                `;
+                ui.openEditModal('تغيير رمز المشرف', html, async () => {
+                    const newPin = document.getElementById('new-pin').value.trim();
+                    if (newPin.length >= 4) {
+                        try {
+                            await setDoc(doc(db, "settings", "admin"), { pin: newPin }, { merge: true });
+                            ui.showToast('تم تغيير الرمز بنجاح', 'success');
+                        } catch (e) { ui.showToast('فشل في حفظ الرمز', 'error'); }
+                    } else { ui.showToast('الرمز قصير جداً', 'error'); }
+                });
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', app.init);
+    </script>
+</body>
+
+</html>
