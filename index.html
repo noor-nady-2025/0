@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
@@ -447,7 +448,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, setDoc, doc, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, setDoc, doc, query, where, onSnapshot, orderBy, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC950hfJVJYQou-LtcDrlv8fdo2GpEZEu0",
@@ -466,7 +467,8 @@
             user: null, exams: [], notifications: [], currentExam: null,
             playerState: { questionIndex: 0, score: 0, correct: 0, wrong: 0, timer: null, seconds: 0 },
             studentStats: { totalCompleted: 0, averageScore: 0, completedIds: [] },
-            lastSeenNotifId: localStorage.getItem('lastSeenNotifId') || null, unsubscribeNotifs: null
+            lastSeenNotifId: localStorage.getItem('lastSeenNotifId') || null, unsubscribeNotifs: null,
+            unsubscribeExams: null // For fast loading
         };
 
         const quranVerses = [
@@ -598,6 +600,7 @@
             },
             logout: () => {
                 if (appState.unsubscribeNotifs) { appState.unsubscribeNotifs(); appState.unsubscribeNotifs = null; }
+                if (appState.unsubscribeExams) { appState.unsubscribeExams(); appState.unsubscribeExams = null; }
                 localStorage.removeItem('noor_user');
                 appState.user = null; appState.studentStats = { totalCompleted: 0, averageScore: 0, completedIds: [] };
                 ui.switchView('view-student-login');
@@ -613,42 +616,36 @@
                     if (!document.getElementById('student-notif-sheet').classList.contains('hidden')) app.renderNotificationsList();
                 });
             },
-            renderNotificationsList: () => {
-                const list = document.getElementById('notif-list');
-                if (appState.notifications.length === 0) {
-                    list.innerHTML = `<div class="flex flex-col items-center justify-center py-10 text-ios-gray opacity-60"><ion-icon name="notifications-off-outline" class="text-6xl mb-4"></ion-icon><p class="font-medium">لا توجد إشعارات حالياً</p></div>`; return;
-                }
-                list.innerHTML = appState.notifications.map((n, idx) => {
-                    const isNew = idx === 0 && n.id !== appState.lastSeenNotifId;
-                    return `
-                    <div class="bg-white p-4 rounded-2xl shadow-ios-sm border border-gray-100 relative overflow-hidden animate-slide-up" style="animation-delay: ${idx * 0.05}s">
-                        ${isNew ? '<div class="absolute top-0 right-0 w-2 h-full bg-ios-blue"></div>' : ''}
-                        <div class="flex gap-3">
-                            <div class="w-10 h-10 bg-blue-50 text-ios-blue rounded-full flex items-center justify-center shrink-0 mt-1"><ion-icon name="megaphone" class="text-xl"></ion-icon></div>
-                            <div>
-                                <h4 class="font-bold text-ios-text mb-1 pr-2">${n.title}</h4>
-                                <p class="text-sm text-ios-gray leading-relaxed">${n.body}</p>
-                                <span class="text-[10px] text-gray-400 mt-2 block" dir="ltr">${new Date(n.createdAt).toLocaleString('ar-EG')}</span>
-                            </div>
-                        </div>
-                    </div>`
-                }).join('');
-            },
-            loadExams: async () => {
-                ui.showToast('جاري تحميل الامتحانات...', 'info');
-                try {
-                    const querySnapshot = await getDocs(collection(db, "exams"));
-                    let fetchedExams = []; querySnapshot.forEach((doc) => fetchedExams.push(doc.data()));
-                    appState.exams = fetchedExams.sort((a, b) => b.createdAt - a.createdAt);
-                    await app.loadStudentStats();
+            loadExams: () => {
+                ui.showToast('جاري استدعاء البيانات...', 'info');
+                // ✅ استخدام onSnapshot للاستدعاء السريع (Caching) بدلاً من التحميل الكامل كل مرة
+                const q = query(collection(db, "exams"), orderBy("createdAt", "desc"));
+                
+                appState.unsubscribeExams = onSnapshot(q, async (snapshot) => {
+                    let fetchedExams = []; 
+                    snapshot.forEach((doc) => fetchedExams.push(doc.data()));
+                    appState.exams = fetchedExams;
+                    
+                    // تأكد من تحميل إحصائيات الطالب إذا لم يتم تحميلها مسبقاً في هذه الجلسة
+                    if (appState.studentStats.totalCompleted === 0) {
+                        await app.loadStudentStats();
+                    }
+                    
                     app.filterExams();
-                    ui.switchView('view-student-dashboard');
-                } catch (error) { console.error("Error loading exams:", error); ui.showToast('تعذر الاتصال بقاعدة البيانات.', 'error'); }
+                    // التبديل للواجهة فقط إذا لم نكن في وضع الامتحان
+                    const currentView = document.querySelector('main > div:not(.hidden-view)');
+                    if(!currentView || currentView.id === 'view-student-login' || currentView.id === 'view-student-dashboard'){
+                        ui.switchView('view-student-dashboard');
+                    }
+                }, (error) => {
+                    console.error("Error loading exams:", error); 
+                    ui.showToast('تعذر الاتصال بقاعدة البيانات.', 'error');
+                });
             },
             loadStudentStats: async () => {
                 try {
                     const q = query(collection(db, "results"), where("userId", "==", appState.user.uid));
-                    const querySnapshot = await getDocs(q);
+                    const querySnapshot = await getDocs(q); // getDocs is fine here as it's user specific and small
                     let totalPercentage = 0; let count = 0; appState.studentStats.completedIds = [];
                     querySnapshot.forEach((doc) => {
                         const r = doc.data(); count++; totalPercentage += r.percentage || 0;
@@ -791,7 +788,6 @@
                         });
                     }
                 }
-                // ✅ عرض مصادر السؤال والإجابة
                 const srcHtml = [
                     q.sourceQuestion ? `<div class="flex items-start gap-2 text-sm"><span class="shrink-0 w-6 h-6 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center"><ion-icon name="location-outline" class="text-xs"></ion-icon></span><div><span class="font-bold text-amber-700">مكان السؤال: </span><span class="text-ios-gray">${q.sourceQuestion}</span></div></div>` : '',
                     q.sourceAnswer ? `<div class="flex items-start gap-2 text-sm"><span class="shrink-0 w-6 h-6 bg-green-100 text-ios-green rounded-full flex items-center justify-center"><ion-icon name="checkmark-circle-outline" class="text-xs"></ion-icon></span><div><span class="font-bold text-ios-green">مكان الإجابة: </span><span class="text-ios-gray">${q.sourceAnswer}</span></div></div>` : ''
@@ -821,15 +817,13 @@
                 const resultId = 'res_' + Date.now() + Math.random().toString(36).substr(2, 5);
                 const payload = { id: resultId, userId: appState.user.uid, userName: appState.user.name, examId: appState.currentExam.id, examTitle: appState.currentExam.title, score: state.score, correct: state.correct, wrong: state.wrong, percentage: pct, completedAt: Date.now() };
 
-                // ✅ حفظ النتيجة في localStorage على جهاز الطالب
                 try {
                     const localKey = `noor_results_${appState.user.uid}`;
                     const existing = JSON.parse(localStorage.getItem(localKey) || '[]');
-                    existing.unshift(payload); // أحدث نتيجة أولاً
+                    existing.unshift(payload);
                     localStorage.setItem(localKey, JSON.stringify(existing));
                 } catch(le) { console.warn('Local save failed', le); }
 
-                // ✅ رفع النتيجة لـ Firebase
                 try { await setDoc(doc(db, "results", resultId), payload); app.loadStudentStats(); } catch (error) { console.error("Error saving result:", error); }
             }
         };
@@ -839,3 +833,5 @@
 </body>
 
 </html>
+
+
