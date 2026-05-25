@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 
@@ -131,14 +130,12 @@
 
 <body class="antialiased selection:bg-ios-blue selection:text-white flex flex-col items-center">
 
-    <!-- Toasts -->
     <div id="toast"
         class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] transform -translate-y-20 opacity-0 transition-all duration-400 ease-out flex items-center gap-3 px-5 py-3 rounded-full shadow-ios-lg pointer-events-none">
         <ion-icon id="toast-icon" name="information-circle" class="text-xl"></ion-icon>
         <span id="toast-msg" class="font-medium text-sm"></span>
     </div>
 
-    <!-- Header -->
     <div id="global-header"
         class="fixed top-0 left-0 right-0 z-50 ios-glass flex flex-col items-center pb-3 hidden-view">
         <div class="w-full max-w-5xl px-4 mt-4 flex justify-between items-center">
@@ -158,10 +155,8 @@
         </div>
     </div>
 
-    <!-- Main Content -->
     <main class="w-full max-w-5xl px-4 min-h-screen pb-20 relative pt-24">
 
-        <!-- Splash / Login -->
         <div id="view-splash" class="min-h-[80vh] flex flex-col items-center justify-center animate-fade-in pt-0">
             <div class="w-full max-w-md">
                 <div class="ios-card p-8 animate-scale-in border-t-4 border-t-ios-text">
@@ -193,7 +188,6 @@
             </div>
         </div>
 
-        <!-- Dashboard -->
         <div id="view-admin-dashboard" class="hidden-view animate-fade-in">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 gap-4">
                 <div>
@@ -204,7 +198,7 @@
                         <button onclick="ui.switchAdminTab('notifications')" id="tab-notifs"
                             class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300">الإشعارات</button>
                         <button onclick="ui.switchAdminTab('results')" id="tab-results"
-                            class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300 flex items-center gap-1"><ion-icon name="stats-chart-outline"></ion-icon> نتائج الطلاب</button>
+                            class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300 flex items-center gap-1"><ion-icon name="stats-chart-outline"></ion-icon> نتائج الطلاب <span id="live-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse hidden"></span></button>
                         <button onclick="app.openChangePinModal()"
                             class="px-4 py-1.5 bg-gray-200 text-ios-gray rounded-full text-sm font-bold transition-colors hover:bg-gray-300">
                             <ion-icon name="key-outline"></ion-icon> تغيير الرمز
@@ -217,7 +211,6 @@
                 </button>
             </div>
 
-            <!-- Exams Tab -->
             <div id="admin-tab-exams">
                 <div class="ios-card overflow-hidden">
                     <div class="overflow-x-auto">
@@ -231,14 +224,12 @@
                                 </tr>
                             </thead>
                             <tbody id="admin-exams-list" class="divide-y divide-gray-100">
-                                <!-- Exams injected here -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Notifications Tab -->
             <div id="admin-tab-notifications" class="hidden">
                 <div class="ios-card p-6 mb-6 border-2 border-dashed border-gray-200">
                     <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><ion-icon name="send"
@@ -256,28 +247,21 @@
 
                 <h3 class="text-lg font-bold mb-4 text-ios-text">الإشعارات السابقة</h3>
                 <div class="space-y-3" id="admin-notifs-list">
-                    <!-- Notifications rendered here -->
-                </div>
+                    </div>
             </div>
 
-            <!-- Results Tab -->
             <div id="admin-tab-results" class="hidden">
                 <div class="flex items-center justify-between mb-5">
                     <h3 class="text-xl font-bold text-ios-text flex items-center gap-2">
                         <ion-icon name="people" class="text-ios-purple"></ion-icon>
                         نتائج الطلاب
+                        <span class="text-[11px] font-bold bg-green-100 text-ios-green px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse"><ion-icon name="radio"></ion-icon> Live</span>
                     </h3>
-                    <button onclick="app.loadResults()" class="ios-btn bg-gray-100 text-ios-gray px-4 py-2 text-sm flex items-center gap-1 hover:bg-gray-200">
-                        <ion-icon name="refresh"></ion-icon> تحديث
-                    </button>
                 </div>
 
-                <!-- Exam filter tabs -->
                 <div id="results-exam-tabs" class="flex flex-wrap gap-2 mb-6 pb-3 border-b border-gray-200">
-                    <!-- Injected by JS -->
-                </div>
+                    </div>
 
-                <!-- Results table per exam -->
                 <div id="results-content">
                     <div class="text-center p-12 text-ios-gray">
                         <ion-icon name="hourglass-outline" class="text-5xl mb-3 opacity-40"></ion-icon>
@@ -287,7 +271,6 @@
             </div>
         </div>
 
-        <!-- Exam Builder / Editor -->
         <div id="view-admin-exam-form" class="hidden-view animate-fade-in max-w-3xl mx-auto">
             <div class="flex items-center gap-4 mb-6">
                 <button onclick="ui.switchView('view-admin-dashboard')"
@@ -343,8 +326,7 @@
                         class="bg-purple-50 text-ios-purple px-3 py-1 rounded-full text-sm font-bold">0 سؤال</span>
                 </div>
                 <div id="draft-questions-list" class="space-y-4 mb-6">
-                    <!-- Draft questions -->
-                </div>
+                    </div>
 
                 <hr class="border-gray-100 mb-6">
 
@@ -366,7 +348,6 @@
                             class="space-y-3 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                             <p class="text-xs text-ios-gray font-bold uppercase mb-2">الخيارات (حدد الدائرة للإجابة
                                 الصحيحة)</p>
-                            <!-- Options 1-4 -->
                             <div class="flex gap-3 items-start">
                                 <input type="radio" name="correct-opt" value="0"
                                     class="mt-4 w-5 h-5 accent-ios-green cursor-pointer" checked>
@@ -444,7 +425,6 @@
                                 placeholder="شرح إضافي عام للسؤال يظهر بعد الإجابة (اختياري)..."></textarea>
                         </div>
 
-                        <!-- Source Fields -->
                         <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
                             <p class="text-xs font-bold text-amber-700 uppercase flex items-center gap-1.5">
                                 <ion-icon name="book-outline" class="text-sm"></ion-icon>
@@ -481,7 +461,6 @@
         </div>
     </main>
 
-    <!-- Custom Confirm Modal -->
     <div id="modal-custom-confirm"
         class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl w-full max-w-sm p-6 text-center shadow-2xl transform scale-95 transition-transform duration-300"
@@ -501,7 +480,6 @@
         </div>
     </div>
 
-    <!-- Edit/Change Modal -->
     <div id="modal-edit"
         class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform scale-95 transition-transform duration-300"
@@ -513,15 +491,14 @@
                         name="close"></ion-icon></button>
             </div>
             <div id="edit-modal-body" class="space-y-4">
-                <!-- Inputs injected dynamically -->
-            </div>
+                </div>
             <button id="edit-save-btn" class="ios-btn w-full bg-ios-blue text-white py-3 mt-6">حفظ التغييرات</button>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc, updateDoc, getDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, getDocs, setDoc, doc, deleteDoc, updateDoc, getDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC950hfJVJYQou-LtcDrlv8fdo2GpEZEu0",
@@ -534,10 +511,18 @@
         };
 
         const firebaseApp = initializeApp(firebaseConfig);
-        const db = getFirestore(firebaseApp);
+        const db = initializeFirestore(firebaseApp, {
+            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+        });
 
-        // إضافة editingExamId لمعرفة ما إذا كنا نعدل امتحاناً موجوداً أو نضيف جديداً
-        window.appState = { isAdmin: false, draftQuestions: [], exams: [], notifications: [], results: [], editingExamId: null, unsubscribeExams: null };
+        window.appState = { 
+            isAdmin: false, draftQuestions: [], exams: [], notifications: [], results: [], 
+            editingExamId: null, 
+            unsubscribeExams: null,
+            unsubscribeResults: null,
+            unsubscribeNotifs: null,
+            currentFilterId: null // المتغير المسؤول عن الاحتفاظ بالفلتر الحالي للنتائج
+        };
 
         window.ui = {
             switchView: (viewId) => {
@@ -591,7 +576,9 @@
                 } else if (tab === 'results') {
                     document.getElementById('admin-tab-results').classList.remove('hidden');
                     document.getElementById('tab-results').className = activeClass + ' flex items-center gap-1';
-                    app.loadResults();
+                    document.getElementById('live-dot').classList.remove('hidden');
+                    // استدعاء دالة الرسم لضمان ظهور البيانات فوراً عند فتح التبويب
+                    app.renderAdminResults(appState.currentFilterId);
                 }
             },
             openEditModal: (title, htmlBody, onSave) => {
@@ -606,6 +593,16 @@
                 const modal = document.getElementById('modal-edit');
                 modal.classList.add('opacity-0'); document.getElementById('modal-edit-content').classList.add('scale-95');
                 setTimeout(() => modal.classList.add('hidden'), 300);
+            },
+            renderTableSkeleton: () => {
+                return Array(4).fill(`
+                    <tr>
+                        <td class="p-4"><div class="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div></td>
+                        <td class="p-4"><div class="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div></td>
+                        <td class="p-4"><div class="h-4 bg-gray-200 rounded w-1/4 animate-pulse"></div></td>
+                        <td class="p-4"><div class="h-8 bg-gray-200 rounded w-16 animate-pulse"></div></td>
+                    </tr>
+                `).join('');
             }
         };
 
@@ -614,6 +611,8 @@
                 const savedUser = localStorage.getItem('noor_admin');
                 if (savedUser === 'true') {
                     appState.isAdmin = true;
+                    ui.switchView('view-admin-dashboard');
+                    document.getElementById('admin-exams-list').innerHTML = ui.renderTableSkeleton();
                     app.loadAdminData();
                 } else {
                     ui.switchView('view-splash');
@@ -624,7 +623,7 @@
                 const pin = document.getElementById('admin-pin').value;
                 try {
                     const docSnap = await getDoc(doc(db, "settings", "admin"));
-                    let correctPin = "123456"; // Default
+                    let correctPin = "123456"; 
                     if (docSnap.exists() && docSnap.data().pin) correctPin = docSnap.data().pin;
 
                     if (pin === correctPin) {
@@ -632,6 +631,9 @@
                         localStorage.setItem('noor_admin', 'true');
                         document.getElementById('admin-pin').value = '';
                         ui.showToast('مرحباً بك في لوحة الإدارة', 'success');
+                        
+                        ui.switchView('view-admin-dashboard');
+                        document.getElementById('admin-exams-list').innerHTML = ui.renderTableSkeleton();
                         app.loadAdminData();
                     } else {
                         ui.showToast('رمز المرور غير صحيح', 'error');
@@ -643,15 +645,17 @@
                 }
             },
             logout: () => {
-                if(appState.unsubscribeExams) appState.unsubscribeExams();
+                if(appState.unsubscribeExams) { appState.unsubscribeExams(); appState.unsubscribeExams = null; }
+                if(appState.unsubscribeResults) { appState.unsubscribeResults(); appState.unsubscribeResults = null; }
+                if(appState.unsubscribeNotifs) { appState.unsubscribeNotifs(); appState.unsubscribeNotifs = null; }
+                
                 localStorage.removeItem('noor_admin');
                 appState.isAdmin = false;
                 ui.switchView('view-splash');
             },
             loadAdminData: async () => {
-                ui.showToast('جاري استدعاء البيانات...', 'info');
                 try {
-                    // ✅ استخدام onSnapshot للاستدعاء السريع للامتحانات
+                    if(appState.unsubscribeExams) appState.unsubscribeExams();
                     const examsQuery = query(collection(db, "exams"), orderBy("createdAt", "desc"));
                     appState.unsubscribeExams = onSnapshot(examsQuery, (snapshot) => {
                         appState.exams = []; 
@@ -659,31 +663,36 @@
                         app.renderAdminExams();
                     });
 
-                    const notifsSnap = await getDocs(collection(db, "notifications"));
-                    appState.notifications = []; notifsSnap.forEach((doc) => appState.notifications.push(doc.data()));
-                    appState.notifications.sort((a, b) => b.createdAt - a.createdAt);
-                    app.renderAdminNotifs();
+                    if(appState.unsubscribeNotifs) appState.unsubscribeNotifs();
+                    const notifsQuery = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+                    appState.unsubscribeNotifs = onSnapshot(notifsQuery, (snapshot) => {
+                        appState.notifications = []; 
+                        snapshot.forEach((doc) => appState.notifications.push(doc.data()));
+                        app.renderAdminNotifs();
+                    });
 
-                    ui.switchView('view-admin-dashboard');
+                    app.loadRealtimeResults();
+
                 } catch (error) { console.error("Load error:", error); ui.showToast('خطأ في جلب البيانات', 'error'); }
             },
-            loadResults: async () => {
-                const content = document.getElementById('results-content');
-                const tabsEl = document.getElementById('results-exam-tabs');
-                content.innerHTML = `<div class="text-center p-12 text-ios-gray"><ion-icon name="hourglass-outline" class="text-5xl mb-3 opacity-40"></ion-icon><p>جاري تحميل النتائج...</p></div>`;
-                tabsEl.innerHTML = '';
-                try {
-                    const q = query(collection(db, "results"), orderBy("completedAt", "desc"));
-                    const snap = await getDocs(q);
+            loadRealtimeResults: () => {
+                if(appState.unsubscribeResults) appState.unsubscribeResults();
+                const q = query(collection(db, "results"), orderBy("completedAt", "desc"));
+                
+                appState.unsubscribeResults = onSnapshot(q, (snap) => {
                     appState.results = [];
                     snap.forEach(d => appState.results.push(d.data()));
-                    app.renderAdminResults(null);
-                } catch (error) {
+                    // إجبار الكود على رسم النتائج مباشرة في الـ DOM بمجرد وصول البيانات
+                    app.renderAdminResults(appState.currentFilterId);
+                }, (error) => {
                     console.error("Results load error:", error);
-                    content.innerHTML = `<div class="text-center p-12 text-ios-red"><ion-icon name="alert-circle-outline" class="text-5xl mb-3"></ion-icon><p>خطأ في تحميل النتائج</p></div>`;
-                }
+                    document.getElementById('results-content').innerHTML = `<div class="text-center p-12 text-ios-red"><ion-icon name="alert-circle-outline" class="text-5xl mb-3"></ion-icon><p>خطأ في تحميل النتائج</p></div>`;
+                });
             },
-            renderAdminResults: (filterExamId) => {
+            renderAdminResults: (filterExamId = null) => {
+                // حفظ التبويب/الفلتر الحالي الخاص بالنتائج حتى لا يضيع عند التحديث
+                appState.currentFilterId = filterExamId;
+                
                 const content = document.getElementById('results-content');
                 const tabsEl = document.getElementById('results-exam-tabs');
                 const results = appState.results;
@@ -785,9 +794,12 @@
                 if (appState.exams.length === 0) {
                     list.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-ios-gray">لا توجد امتحانات، ابدأ بإنشاء امتحان جديد.</td></tr>`; return;
                 }
-                // تمت إضافة زر التعديل هنا
-                list.innerHTML = appState.exams.map(ex => `
-                    <tr class="hover:bg-gray-50/50 transition-colors">
+                
+                const fragment = document.createDocumentFragment();
+                appState.exams.forEach(ex => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50/50 transition-colors";
+                    tr.innerHTML = `
                         <td class="p-4 font-bold text-ios-text">${ex.title}</td>
                         <td class="p-4"><span class="bg-blue-50 text-ios-blue px-2 py-1 rounded text-xs font-bold">${ex.questions.length} أسئلة</span></td>
                         <td class="p-4 text-sm text-ios-gray">${ex.timeLimit ? ex.timeLimit + ' دقيقة' : 'مفتوح'}</td>
@@ -795,16 +807,18 @@
                             <button onclick="app.editExam('${ex.id}')" class="text-ios-blue hover:bg-blue-50 p-2 rounded-lg transition-colors inline-flex"><ion-icon name="create" class="text-xl"></ion-icon></button>
                             <button onclick="app.deleteExam('${ex.id}')" class="text-ios-red hover:bg-red-50 p-2 rounded-lg transition-colors inline-flex"><ion-icon name="trash" class="text-xl"></ion-icon></button>
                         </td>
-                    </tr>
-                `).join('');
+                    `;
+                    fragment.appendChild(tr);
+                });
+                
+                list.innerHTML = '';
+                list.appendChild(fragment);
             },
-            // ✅ دالة جديدة لفتح نموذج إضافة امتحان فارغ
             openNewExamForm: () => {
                 appState.editingExamId = null;
                 document.getElementById('form-main-title').innerText = 'بناء امتحان جديد';
                 document.getElementById('main-save-btn').innerHTML = '<ion-icon name="save"></ion-icon> حفظ ونشر الامتحان';
                 
-                // تفريغ الحقول
                 document.getElementById('form-exam-title').value = ''; 
                 document.getElementById('form-exam-desc').value = '';
                 document.getElementById('form-exam-cover').value = ''; 
@@ -816,7 +830,6 @@
                 
                 ui.switchView('view-admin-exam-form');
             },
-            // ✅ دالة جديدة لتعديل امتحان موجود
             editExam: (id) => {
                 const exam = appState.exams.find(e => e.id === id);
                 if(!exam) return;
@@ -825,14 +838,12 @@
                 document.getElementById('form-main-title').innerText = 'تعديل بيانات الامتحان';
                 document.getElementById('main-save-btn').innerHTML = '<ion-icon name="sync"></ion-icon> تحديث التعديلات';
                 
-                // تعبئة البيانات
                 document.getElementById('form-exam-title').value = exam.title || ''; 
                 document.getElementById('form-exam-desc').value = exam.desc || '';
                 document.getElementById('form-exam-cover').value = exam.coverImage || ''; 
                 document.getElementById('form-exam-time').value = exam.timeLimit || '';
                 document.getElementById('form-exam-random').checked = exam.randomize !== false;
                 
-                // نسخ الأسئلة الحالية لتكون هي المسودة
                 appState.draftQuestions = JSON.parse(JSON.stringify(exam.questions || [])); 
                 app.renderDraftQuestions();
                 
@@ -886,7 +897,6 @@
                 app.renderDraftQuestions();
                 ui.showToast('تم إضافة السؤال بنجاح', 'success');
 
-                // Clear Form
                 document.getElementById('q-text').value = ''; document.getElementById('q-general-exp').value = '';
                 document.getElementById('q-source-question').value = ''; document.getElementById('q-source-answer').value = '';
                 if (type === 'mcq') { for (let i = 0; i < 4; i++) { document.getElementById(`q-opt-${i}`).value = ''; document.getElementById(`q-exp-${i}`).value = ''; } }
@@ -945,7 +955,6 @@
                 btn.innerHTML = `<ion-icon name="sync" class="animate-spin text-2xl"></ion-icon> جاري ${isEditing ? 'التحديث' : 'الحفظ'}...`; 
                 btn.disabled = true;
 
-                // إذا كنا نعدل سنأخذ نفس المعرف القديم، وإذا كان جديداً نصنع معرفاً جديداً
                 const finalExamId = isEditing ? appState.editingExamId : ('exam_' + Date.now() + Math.random().toString(36).substr(2, 5));
                 const originalExam = isEditing ? appState.exams.find(e => e.id === finalExamId) : null;
 
@@ -953,7 +962,7 @@
                     id: finalExamId,
                     title, desc, coverImage: cover, timeLimit: time ? parseInt(time) : null, randomize: isRandom,
                     questions: appState.draftQuestions, 
-                    createdAt: isEditing ? originalExam.createdAt : Date.now() // الحفاظ على تاريخ الإنشاء الأصلي عند التعديل
+                    createdAt: isEditing ? originalExam.createdAt : Date.now() 
                 };
 
                 if (isEditing) examObj.updatedAt = Date.now();
@@ -962,8 +971,8 @@
                     await setDoc(doc(db, "exams", examObj.id), examObj);
                     ui.showToast(isEditing ? 'تم تحديث الامتحان بنجاح!' : 'تم حفظ ونشر الامتحان بنجاح!', 'success');
 
-                    app.openNewExamForm(); // لتفريغ الحقول والعودة لحالة الإضافة
-                    ui.switchView('view-admin-dashboard'); // الرجوع للرئيسية
+                    app.openNewExamForm(); 
+                    ui.switchView('view-admin-dashboard'); 
                 } catch (error) {
                     console.error(error); ui.showToast('خطأ في الحفظ السحابي', 'error');
                 } finally {
@@ -971,7 +980,6 @@
                     btn.disabled = false;
                 }
             },
-            // Notification Logic
             renderAdminNotifs: () => {
                 const list = document.getElementById('admin-notifs-list');
                 if (appState.notifications.length === 0) { list.innerHTML = '<div class="text-center p-6 text-ios-gray bg-white rounded-xl border border-gray-100">لا توجد إشعارات مرسلة.</div>'; return; }
@@ -998,15 +1006,13 @@
                     await setDoc(doc(db, "notifications", notif.id), notif);
                     document.getElementById('notif-title').value = ''; document.getElementById('notif-body').value = '';
                     ui.showToast('تم الإرسال', 'success');
-                    appState.notifications.unshift(notif); app.renderAdminNotifs();
                 } catch (e) { ui.showToast('فشل الإرسال', 'error'); }
             },
             deleteNotification: (id) => {
                 ui.confirm('حذف إشعار', 'هل أنت متأكد من حذف هذا الإشعار؟ سيختفي من عند الطلاب.', async () => {
                     try {
                         await deleteDoc(doc(db, "notifications", id));
-                        appState.notifications = appState.notifications.filter(n => n.id !== id);
-                        app.renderAdminNotifs(); ui.showToast('تم الحذف', 'success');
+                        ui.showToast('تم الحذف', 'success');
                     } catch (e) { ui.showToast('خطأ بالحذف', 'error'); }
                 });
             },
@@ -1023,7 +1029,6 @@
                     if (nt && nb) {
                         try {
                             await updateDoc(doc(db, "notifications", id), { title: nt, body: nb });
-                            notif.title = nt; notif.body = nb; app.renderAdminNotifs();
                             ui.showToast('تم التعديل بنجاح', 'success');
                         } catch (e) { ui.showToast('فشل التعديل', 'error'); }
                     }
@@ -1050,5 +1055,3 @@
 </body>
 
 </html>
-
-
