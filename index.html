@@ -164,6 +164,14 @@
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(142, 142, 147, 0.3); border-radius: 10px; }
+
+        /* Fix math/answer overflow */
+        #feedback-card { max-width: 100%; overflow: hidden; }
+        #feedback-desc { width: 100%; min-width: 0; overflow: hidden; }
+        #feedback-desc > div { max-width: 100%; overflow-x: auto; }
+        .MathJax, .MJX-TEX { max-width: 100% !important; overflow-x: auto !important; display: block !important; }
+        mjx-container { overflow-x: auto !important; max-width: 100% !important; display: block !important; padding-bottom: 4px; }
+        mjx-math { white-space: nowrap; }
     </style>
 
     <script>
@@ -663,13 +671,14 @@
             },
             showFeedback: (isCorrect, q, selectedVal, autoScroll = false) => {
                 const fbBox = document.getElementById('feedback-container'); const fbCard = document.getElementById('feedback-card'); const icon = document.getElementById('feedback-icon'); const title = document.getElementById('feedback-title'); const desc = document.getElementById('feedback-desc'); const analysis = document.getElementById('feedback-options-analysis');
-                fbBox.classList.remove('hidden'); analysis.classList.add('hidden'); analysis.innerHTML = ''; fbCard.className = 'ios-card border-2 p-5 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-5 transition-colors duration-300 ';
+                fbBox.classList.remove('hidden'); analysis.classList.add('hidden'); analysis.innerHTML = ''; fbCard.className = 'ios-card border-2 p-5 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-5 transition-colors duration-300 overflow-hidden w-full min-w-0 ';
                 
                 if (q.type === 'essay') { 
                     fbCard.classList.add('border-ios-purple', 'bg-purple-500/5'); icon.innerHTML = '<ion-icon name="bulb" class="text-ios-purple"></ion-icon>'; 
                     title.innerText = 'الإجابة النموذجية'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-purple'; 
-                    desc.innerHTML = `<div class="font-bold text-ios-text bg-[var(--card-bg)] p-4 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm border border-[var(--border-color)] text-sm sm:text-base">${q.modelAnswer}</div>`; 
-                    if (q.explanation) desc.innerHTML += `<div class="mt-4 sm:mt-5 text-xs sm:text-sm text-ios-gray flex gap-1.5 sm:gap-2"><ion-icon name="information-circle" class="text-lg sm:text-xl"></ion-icon> ${q.explanation}</div>`; 
+                    const formattedAnswer = (q.modelAnswer || '').replace(/\n/g, '<br>');
+                    desc.innerHTML = `<div class="font-bold text-ios-text bg-[var(--card-bg)] p-4 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm border border-[var(--border-color)] text-sm sm:text-base overflow-x-auto" dir="auto" style="word-break:break-word;overflow-wrap:break-word;">${formattedAnswer}</div>`; 
+                    if (q.explanation) desc.innerHTML += `<div class="mt-4 sm:mt-5 text-xs sm:text-sm text-ios-gray flex gap-1.5 sm:gap-2 items-start"><ion-icon name="information-circle" class="text-lg sm:text-xl shrink-0 mt-0.5"></ion-icon><span>${q.explanation}</span></div>`; 
                 }
                 else { 
                     if (isCorrect) { fbCard.classList.add('border-ios-green', 'bg-green-500/5'); icon.innerHTML = '<ion-icon name="checkmark-circle" class="text-ios-green"></ion-icon>'; title.innerText = 'إجابة صحيحة!'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-green'; } 
