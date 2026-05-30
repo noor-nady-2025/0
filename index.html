@@ -408,7 +408,32 @@
         const firebaseApp = initializeApp(firebaseConfig);
         const db = initializeFirestore(firebaseApp, { localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()}) });
 
-        window.appState = { user: null, exams: [], notifications: [], currentExam: null, playerState: { questionIndex: 0, score: 0, correct: 0, wrong: 0, timer: null, seconds: 0, answers: {} }, studentStats: { totalCompleted: 0, averageScore: 0, completedIds: [] }, lastSeenNotifId: localStorage.getItem('lastSeenNotifId') || null, unsubscribeNotifs: null, unsubscribeExams: null, searchTimeout: null };
+        // ══════════════════════════════════════════════════════════
+        //  ULTRA-FAST CACHE SYSTEM
+        //  الاستراتيجية: Cache أولاً → عرض فوري → ثم sync مع Firebase
+        // ══════════════════════════════════════════════════════════
+        const CACHE_EXAMS_KEY  = 'noor_exams_v3';
+        const CACHE_NOTIFS_KEY = 'noor_notifs_v3';
+        const CACHE_TS_KEY     = 'noor_cache_ts_v3';
+        const CACHE_TTL        = 5 * 60 * 1000; // 5 دقايق fresh window
+
+        const cache = {
+            getExams:   () => { try { return JSON.parse(localStorage.getItem(CACHE_EXAMS_KEY)  || 'null'); } catch { return null; } },
+            setExams:   (d) => { try { localStorage.setItem(CACHE_EXAMS_KEY,  JSON.stringify(d)); localStorage.setItem(CACHE_TS_KEY, String(Date.now())); } catch {} },
+            getNotifs:  () => { try { return JSON.parse(localStorage.getItem(CACHE_NOTIFS_KEY) || 'null'); } catch { return null; } },
+            setNotifs:  (d) => { try { localStorage.setItem(CACHE_NOTIFS_KEY, JSON.stringify(d)); } catch {} },
+            isStale:    () => Date.now() - parseInt(localStorage.getItem(CACHE_TS_KEY) || '0') > CACHE_TTL,
+            clear:      () => [CACHE_EXAMS_KEY, CACHE_NOTIFS_KEY, CACHE_TS_KEY].forEach(k => localStorage.removeItem(k))
+        };
+
+        window.appState = {
+            user: null, exams: [], notifications: [], currentExam: null,
+            playerState: { questionIndex: 0, score: 0, correct: 0, wrong: 0, timer: null, seconds: 0, answers: {} },
+            studentStats: { totalCompleted: 0, averageScore: 0, completedIds: [] },
+            lastSeenNotifId: localStorage.getItem('lastSeenNotifId') || null,
+            unsubscribeNotifs: null, unsubscribeExams: null, searchTimeout: null,
+            syncIndicator: null
+        };
 
         const quranVerses = ["وَقَالَ رَبُّكُمُ ادْعُونِي أَسْتَجِبْ لَكُمْ ۝", "لَا تَحْزَنْ إِنَّ اللَّهَ مَعَنَا ۝", "فَإِنَّ مَعَ الْعُسْرِ يُسْرًا ۝", "وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا ۝", "وَاصْبِرْ لِحُكْمِ رَبِّكَ فَإِنَّكَ بِأَعْيُنِنَا ۝"];
 
@@ -432,11 +457,33 @@
                 toast.classList.remove('-translate-y-24', 'opacity-0');
                 setTimeout(() => { toast.classList.add('-translate-y-24', 'opacity-0'); }, 3000);
             },
+            showSyncBadge: (state) => {
+                // state: 'syncing' | 'done' | 'cached' | 'offline'
+                let el = document.getElementById('sync-badge');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'sync-badge';
+                    el.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:999;transition:all 0.4s;pointer-events:none;';
+                    document.body.appendChild(el);
+                }
+                const configs = {
+                    syncing: { bg: '#0A84FF', icon: '🔄', text: 'جاري التحديث...' },
+                    done:    { bg: '#30D158', icon: '✅', text: 'تم التحديث' },
+                    cached:  { bg: '#FF9F0A', icon: '⚡', text: 'من الذاكرة المحلية' },
+                    offline: { bg: '#FF453A', icon: '📵', text: 'أنت غير متصل' }
+                };
+                const c = configs[state] || configs.done;
+                el.innerHTML = `<div style="background:${c.bg};color:white;padding:8px 18px;border-radius:20px;font-family:Tajawal,sans-serif;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);">${c.icon} ${c.text}</div>`;
+                el.style.opacity = '1';
+                if (state === 'done' || state === 'cached') {
+                    setTimeout(() => { el.style.opacity = '0'; }, 2000);
+                }
+            },
             playSound: (type) => { /* logic stays same */ },
             startQuranTicker: () => {
                 const ticker = document.getElementById('quran-ticker'); let idx = 0;
                 const updateVerse = () => { ticker.style.opacity = 0; setTimeout(() => { idx = (idx + 1) % quranVerses.length; ticker.innerText = quranVerses[idx]; ticker.style.opacity = 1; }, 500); };
-                updateVerse(); setInterval(updateVerse, 30000); // تم التعديل هنا إلى 30 ثانية
+                updateVerse(); setInterval(updateVerse, 30000);
             },
             confirm: (title, msg, onConfirmCallback) => {
                 const modal = document.getElementById('modal-custom-confirm');
@@ -465,55 +512,172 @@
         window.app = {
             init: () => {
                 ui.startQuranTicker();
+                // مراقبة حالة الاتصال
+                window.addEventListener('online',  () => { ui.showSyncBadge('syncing'); app._startFirebaseSync(); });
+                window.addEventListener('offline', () => ui.showSyncBadge('offline'));
+
                 try {
                     const savedUser = localStorage.getItem('noor_user');
-                    if (savedUser) { appState.user = JSON.parse(savedUser); ui.switchView('view-student-dashboard'); document.getElementById('exams-container').innerHTML = ui.renderSkeletonLoader(); app.listenForNotifications(); app.loadExams(); }
-                    else { ui.switchView('view-student-login'); }
+                    if (savedUser) {
+                        appState.user = JSON.parse(savedUser);
+                        ui.switchView('view-student-dashboard');
+
+                        // ── STEP 1: عرض من الكاش فوراً ─────────────────────
+                        const cachedExams = cache.getExams();
+                        if (cachedExams && cachedExams.length > 0) {
+                            appState.exams = cachedExams;
+                            app._applyLocalStats();
+                            app.filterExams();
+                            ui.showSyncBadge('cached');
+                        } else {
+                            document.getElementById('exams-container').innerHTML = ui.renderSkeletonLoader();
+                        }
+
+                        const cachedNotifs = cache.getNotifs();
+                        if (cachedNotifs) { appState.notifications = cachedNotifs; }
+
+                        // ── STEP 2: sync Firebase في الخلفية ─────────────
+                        app._startFirebaseSync();
+                    } else { ui.switchView('view-student-login'); }
                 } catch(e) { localStorage.removeItem('noor_user'); ui.switchView('view-student-login'); }
             },
+
+            // تطبيق إحصائيات الطالب من localStorage دون انتظار Firebase
+            _applyLocalStats: () => {
+                try {
+                    const localKey = `noor_results_${appState.user.uid}`;
+                    const results = JSON.parse(localStorage.getItem(localKey) || '[]');
+                    if (results.length > 0) {
+                        const total = results.reduce((s, r) => s + (r.percentage || 0), 0);
+                        appState.studentStats.totalCompleted = results.length;
+                        appState.studentStats.averageScore = Math.round(total / results.length);
+                        appState.studentStats.completedIds = [...new Set(results.map(r => r.examId).filter(Boolean))];
+                        document.getElementById('stat-completed-exams').innerText = results.length;
+                        document.getElementById('stat-average-score').innerText = `${appState.studentStats.averageScore}%`;
+                    }
+                } catch {}
+            },
+
+            // الاتصال بـ Firebase وتحديث الكاش عند أي تغيير
+            _startFirebaseSync: () => {
+                if (!navigator.onLine) { ui.showSyncBadge('offline'); return; }
+
+                // ─ مزامنة الامتحانات ─────────────────────────────────────
+                if (appState.unsubscribeExams) appState.unsubscribeExams();
+                const examsQ = query(collection(db, "exams"), orderBy("createdAt", "desc"));
+
+                appState.unsubscribeExams = onSnapshot(examsQ, { includeMetadataChanges: true }, (snapshot) => {
+                    const fromServer = !snapshot.metadata.fromCache;
+
+                    // اقرأ البيانات دايماً
+                    let fetched = [];
+                    snapshot.forEach(d => fetched.push(d.data()));
+
+                    if (fetched.length > 0 || fromServer) {
+                        const changed = JSON.stringify(fetched) !== JSON.stringify(appState.exams);
+                        if (changed) {
+                            appState.exams = fetched;
+                            app.filterExams();
+                            if (fromServer) {
+                                cache.setExams(fetched);     // حفظ في الكاش
+                                ui.showSyncBadge('done');
+                            }
+                        }
+                    }
+
+                    // بعد أول sync من السيرفر: حمّل إحصائيات حقيقية
+                    if (fromServer) { app.loadStudentStats(); }
+
+                }, (err) => {
+                    console.warn('Firestore stream error:', err);
+                    // الكاش شغّال — مفيش مشكلة
+                });
+
+                // ─ مزامنة الإشعارات ───────────────────────────────────────
+                if (appState.unsubscribeNotifs) appState.unsubscribeNotifs();
+                const notifsQ = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
+                appState.unsubscribeNotifs = onSnapshot(notifsQ, (snapshot) => {
+                    const newNotifs = [];
+                    snapshot.forEach(d => newNotifs.push(d.data()));
+                    appState.notifications = newNotifs;
+                    cache.setNotifs(newNotifs);
+                    if (newNotifs.length > 0 && newNotifs[0].id !== appState.lastSeenNotifId) {
+                        document.getElementById('notif-badge').classList.remove('hidden');
+                    }
+                    if (!document.getElementById('student-notif-sheet').classList.contains('hidden')) {
+                        app.renderNotificationsList();
+                    }
+                });
+            },
+
             studentLogin: (e) => {
                 e.preventDefault(); const name = document.getElementById('student-name').value.trim();
                 if (name.length < 3) { ui.showToast('يرجى إدخال اسم صحيح', 'error'); return; }
                 let uid = 'stu_' + Date.now() + Math.random().toString(36).substr(2, 5);
                 try { const oldUserStr = localStorage.getItem('noor_user'); if (oldUserStr) { const oldUser = JSON.parse(oldUserStr); if (oldUser.name === name) uid = oldUser.uid; } } catch(err){}
-                appState.user = { role: 'student', name, uid }; localStorage.setItem('noor_user', JSON.stringify(appState.user));
+                appState.user = { role: 'student', name, uid };
+                localStorage.setItem('noor_user', JSON.stringify(appState.user));
                 ui.showToast('أهلاً بك يا ' + name.split(' ')[0], 'success');
-                ui.switchView('view-student-dashboard'); document.getElementById('exams-container').innerHTML = ui.renderSkeletonLoader();
-                app.listenForNotifications(); app.loadExams();
+                ui.switchView('view-student-dashboard');
+
+                const cachedExams = cache.getExams();
+                if (cachedExams && cachedExams.length > 0) {
+                    appState.exams = cachedExams;
+                    app._applyLocalStats();
+                    app.filterExams();
+                    ui.showSyncBadge('cached');
+                } else {
+                    document.getElementById('exams-container').innerHTML = ui.renderSkeletonLoader();
+                }
+                app._startFirebaseSync();
             },
-            logout: () => { if (appState.unsubscribeNotifs) { appState.unsubscribeNotifs(); appState.unsubscribeNotifs = null; } if (appState.unsubscribeExams) { appState.unsubscribeExams(); appState.unsubscribeExams = null; } localStorage.removeItem('noor_user'); appState.user = null; appState.studentStats = { totalCompleted: 0, averageScore: 0, completedIds: [] }; ui.switchView('view-student-login'); },
-            listenForNotifications: () => {
-                if (appState.unsubscribeNotifs) appState.unsubscribeNotifs();
-                const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"));
-                appState.unsubscribeNotifs = onSnapshot(q, (snapshot) => {
-                    const newNotifs = []; snapshot.forEach((doc) => newNotifs.push(doc.data())); appState.notifications = newNotifs;
-                    if (newNotifs.length > 0 && newNotifs[0].id !== appState.lastSeenNotifId) { document.getElementById('notif-badge').classList.remove('hidden'); }
-                    if (!document.getElementById('student-notif-sheet').classList.contains('hidden')) app.renderNotificationsList();
-                });
+
+            logout: () => {
+                if (appState.unsubscribeNotifs) { appState.unsubscribeNotifs(); appState.unsubscribeNotifs = null; }
+                if (appState.unsubscribeExams) { appState.unsubscribeExams(); appState.unsubscribeExams = null; }
+                localStorage.removeItem('noor_user');
+                appState.user = null;
+                appState.studentStats = { totalCompleted: 0, averageScore: 0, completedIds: [] };
+                ui.switchView('view-student-login');
             },
-            loadExams: async () => {
-                await app.loadStudentStats();
-                if (appState.unsubscribeExams) appState.unsubscribeExams();
-                const q = query(collection(db, "exams"), orderBy("createdAt", "desc"));
-                appState.unsubscribeExams = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-                    let fetchedExams = []; snapshot.forEach((doc) => fetchedExams.push(doc.data())); appState.exams = fetchedExams; app.filterExams();
-                }, (error) => { console.error("Error loading exams:", error); ui.showToast('تعذر الاتصال بالخادم.', 'error'); });
-            },
+
+            listenForNotifications: () => { /* handled inside _startFirebaseSync */ },
+
+            loadExams: async () => { app._startFirebaseSync(); },
+
             loadStudentStats: async () => {
                 try {
-                    const q = query(collection(db, "results"), where("userId", "==", appState.user.uid)); const querySnapshot = await getDocs(q); 
-                    let totalPercentage = 0; let count = 0; appState.studentStats.completedIds = [];
-                    querySnapshot.forEach((doc) => { const r = doc.data(); count++; totalPercentage += r.percentage || 0; if (r.examId) appState.studentStats.completedIds.push(r.examId); });
-                    if (count > 0) { appState.studentStats.totalCompleted = count; appState.studentStats.averageScore = Math.round(totalPercentage / count); document.getElementById('stat-completed-exams').innerText = count; document.getElementById('stat-average-score').innerText = `${appState.studentStats.averageScore}%`; }
-                } catch (error) { console.error("Error loading stats:", error); }
+                    const q = query(collection(db, "results"), where("userId", "==", appState.user.uid));
+                    const qs = await getDocs(q);
+                    let totalPct = 0, count = 0;
+                    appState.studentStats.completedIds = [];
+                    const localResults = [];
+                    qs.forEach(d => { const r = d.data(); count++; totalPct += r.percentage || 0; if (r.examId) appState.studentStats.completedIds.push(r.examId); localResults.push(r); });
+                    if (count > 0) {
+                        appState.studentStats.totalCompleted = count;
+                        appState.studentStats.averageScore = Math.round(totalPct / count);
+                        document.getElementById('stat-completed-exams').innerText = count;
+                        document.getElementById('stat-average-score').innerText = `${appState.studentStats.averageScore}%`;
+                        // حفظ محلي للاستخدام السريع لاحقاً
+                        try { localStorage.setItem(`noor_results_${appState.user.uid}`, JSON.stringify(localResults)); } catch {}
+                    }
+                    // تحديث الكاردات لو تغيرت حالة الإكمال
+                    app.filterExams();
+                } catch (error) { console.error("Stats error:", error); }
             },
+
             renderExamsList: (exams) => {
                 const container = document.getElementById('exams-container');
-                if (exams.length === 0) { container.innerHTML = `<div class="col-span-full ios-card text-center py-16 sm:py-20 text-ios-gray border border-dashed border-[var(--border-color)]"><ion-icon name="sad-outline" class="text-5xl sm:text-6xl mb-3 sm:mb-4 opacity-40"></ion-icon><h3 class="text-xl sm:text-2xl font-bold mb-2">لا توجد امتحانات</h3><p class="text-sm sm:text-base">لا توجد تحديات متاحة حالياً.</p></div>`; return; }
+                if (exams.length === 0) {
+                    container.innerHTML = `<div class="col-span-full ios-card text-center py-16 sm:py-20 text-ios-gray border border-dashed border-[var(--border-color)]"><ion-icon name="sad-outline" class="text-5xl sm:text-6xl mb-3 sm:mb-4 opacity-40"></ion-icon><h3 class="text-xl sm:text-2xl font-bold mb-2">لا توجد امتحانات</h3><p class="text-sm sm:text-base">لا توجد تحديات متاحة حالياً.</p></div>`;
+                    return;
+                }
                 const fragment = document.createDocumentFragment();
                 exams.forEach(ex => {
                     const isCompleted = appState.studentStats?.completedIds?.includes(ex.id);
-                    const badgeHTML = isCompleted ? `<span class="text-[10px] sm:text-xs font-bold bg-green-500/10 text-ios-green px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-green-500/20 whitespace-nowrap flex items-center gap-1"><ion-icon name="checkmark-done"></ion-icon> مكتمل</span>` : `<span class="text-[10px] sm:text-xs font-bold bg-blue-500/10 text-ios-blue px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-blue-500/20 whitespace-nowrap">${ex.questions.length} سؤال</span>`;
+                    const badgeHTML = isCompleted
+                        ? `<span class="text-[10px] sm:text-xs font-bold bg-green-500/10 text-ios-green px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-green-500/20 whitespace-nowrap flex items-center gap-1"><ion-icon name="checkmark-done"></ion-icon> مكتمل</span>`
+                        : `<span class="text-[10px] sm:text-xs font-bold bg-blue-500/10 text-ios-blue px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl border border-blue-500/20 whitespace-nowrap">${ex.questions.length} سؤال</span>`;
                     const el = document.createElement('div');
                     el.className = "ios-card p-0 overflow-hidden group cursor-pointer hover:-translate-y-1 sm:hover:-translate-y-2 transition-all duration-500 animate-slide-up flex flex-col h-full";
                     el.onclick = () => app.startExam(ex.id);
@@ -526,30 +690,45 @@
                         </div>`;
                     fragment.appendChild(el);
                 });
-                container.innerHTML = ''; container.appendChild(fragment);
+                container.innerHTML = '';
+                container.appendChild(fragment);
             },
-            filterExams: () => { clearTimeout(appState.searchTimeout); appState.searchTimeout = setTimeout(() => { const term = document.getElementById('search-exam').value.toLowerCase(); const filtered = appState.exams.filter(ex => ex.title.toLowerCase().includes(term) || (ex.desc && ex.desc.toLowerCase().includes(term))); app.renderExamsList(filtered); }, 300); },
-            
-            startExam: (id) => { 
-                const exam = appState.exams.find(e => e.id === id); 
-                if (!exam || !exam.questions || exam.questions.length === 0) { ui.showToast('هذا الامتحان فارغ', 'error'); return; } 
-                let questions = [...exam.questions]; if (exam.randomize) questions.sort(() => Math.random() - 0.5); 
-                appState.currentExam = { ...exam, questions }; 
-                appState.playerState = { questionIndex: 0, score: 0, correct: 0, wrong: 0, timer: null, seconds: exam.timeLimit ? exam.timeLimit * 60 : 0, answers: {} }; 
-                
-                ui.switchView('view-exam-player'); 
-                if (exam.timeLimit) { document.getElementById('timer-display').classList.remove('hidden'); app.startTimer(); } else { document.getElementById('timer-display').classList.add('hidden'); } 
-                app.renderQuestion(); 
+
+            filterExams: () => {
+                clearTimeout(appState.searchTimeout);
+                appState.searchTimeout = setTimeout(() => {
+                    const term = document.getElementById('search-exam').value.toLowerCase();
+                    const filtered = appState.exams.filter(ex => ex.title.toLowerCase().includes(term) || (ex.desc && ex.desc.toLowerCase().includes(term)));
+                    app.renderExamsList(filtered);
+                }, 200);
             },
+
+            startExam: (id) => {
+                const exam = appState.exams.find(e => e.id === id);
+                if (!exam || !exam.questions || exam.questions.length === 0) { ui.showToast('هذا الامتحان فارغ', 'error'); return; }
+                let questions = [...exam.questions]; if (exam.randomize) questions.sort(() => Math.random() - 0.5);
+                appState.currentExam = { ...exam, questions };
+                appState.playerState = { questionIndex: 0, score: 0, correct: 0, wrong: 0, timer: null, seconds: exam.timeLimit ? exam.timeLimit * 60 : 0, answers: {} };
+                ui.switchView('view-exam-player');
+                if (exam.timeLimit) { document.getElementById('timer-display').classList.remove('hidden'); app.startTimer(); } else { document.getElementById('timer-display').classList.add('hidden'); }
+                app.renderQuestion();
+            },
+
             exitExam: () => { ui.confirm('تأكيد الخروج', 'هل أنت متأكد من الخروج؟ سيتم فقدان تقدمك.', () => { clearInterval(appState.playerState.timer); ui.switchView('view-student-dashboard'); }); },
-            startTimer: () => { const display = document.getElementById('time-left'); const updateDisplay = () => { const s = appState.playerState.seconds; const m = Math.floor(s / 60); const remS = s % 60; display.innerText = `${m.toString().padStart(2, '0')}:${remS.toString().padStart(2, '0')}`; if (s <= 60) display.classList.add('text-ios-red'); else display.classList.remove('text-ios-red'); }; updateDisplay(); appState.playerState.timer = setInterval(() => { appState.playerState.seconds--; updateDisplay(); if (appState.playerState.seconds <= 0) { clearInterval(appState.playerState.timer); ui.showToast('انتهى الوقت!', 'error'); app.finishExam(); } }, 1000); },
-            
+
+            startTimer: () => {
+                const display = document.getElementById('time-left');
+                const updateDisplay = () => { const s = appState.playerState.seconds; const m = Math.floor(s / 60); const remS = s % 60; display.innerText = `${m.toString().padStart(2, '0')}:${remS.toString().padStart(2, '0')}`; if (s <= 60) display.classList.add('text-ios-red'); else display.classList.remove('text-ios-red'); };
+                updateDisplay();
+                appState.playerState.timer = setInterval(() => { appState.playerState.seconds--; updateDisplay(); if (appState.playerState.seconds <= 0) { clearInterval(appState.playerState.timer); ui.showToast('انتهى الوقت!', 'error'); app.finishExam(); } }, 1000);
+            },
+
             renderQuestion: () => {
-                const state = appState.playerState; const exam = appState.currentExam; const q = exam.questions[state.questionIndex]; 
-                const progressPct = ((state.questionIndex) / exam.questions.length) * 100; 
-                document.getElementById('player-progress-bar').style.width = `${progressPct}%`; 
-                document.getElementById('player-progress-text').innerText = `السؤال ${state.questionIndex + 1} من ${exam.questions.length}`; 
-                
+                const state = appState.playerState; const exam = appState.currentExam; const q = exam.questions[state.questionIndex];
+                const progressPct = (state.questionIndex / exam.questions.length) * 100;
+                document.getElementById('player-progress-bar').style.width = `${progressPct}%`;
+                document.getElementById('player-progress-text').innerText = `السؤال ${state.questionIndex + 1} من ${exam.questions.length}`;
+
                 const qContainer = document.getElementById('question-anim-container');
                 qContainer.classList.remove('animate-scale-in', 'animate-fade-in');
                 void qContainer.offsetWidth;
@@ -558,65 +737,44 @@
                 document.getElementById('question-text').innerText = q.text;
                 const optBox = document.getElementById('options-container'); const essayBox = document.getElementById('essay-container'); const fbBox = document.getElementById('feedback-container');
                 optBox.innerHTML = ''; fbBox.classList.add('hidden');
-
                 const answeredVal = state.answers[state.questionIndex];
 
-                if (q.type === 'mcq') { 
-                    essayBox.classList.add('hidden'); optBox.classList.remove('hidden'); 
-                    q.options.forEach((opt, idx) => { 
-                        const btn = document.createElement('button'); 
-                        btn.className = `ios-option w-full p-4 sm:p-5 text-right flex items-center justify-between group animate-slide-up stagger-${idx+1}`; 
-                        btn.innerHTML = `<span class="text-base sm:text-xl font-bold leading-relaxed pr-2">${opt.text}</span><div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-[var(--text-muted)] flex items-center justify-center transition-colors group-hover:border-ios-blue shrink-0"></div>`; 
-                        
+                if (q.type === 'mcq') {
+                    essayBox.classList.add('hidden'); optBox.classList.remove('hidden');
+                    q.options.forEach((opt, idx) => {
+                        const btn = document.createElement('button');
+                        btn.className = `ios-option w-full p-4 sm:p-5 text-right flex items-center justify-between group animate-slide-up stagger-${idx+1}`;
+                        btn.innerHTML = `<span class="text-base sm:text-xl font-bold leading-relaxed pr-2">${opt.text}</span><div class="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-[var(--text-muted)] flex items-center justify-center transition-colors group-hover:border-ios-blue shrink-0"></div>`;
                         if (answeredVal !== undefined) {
                             btn.disabled = true; btn.classList.add('opacity-90', 'cursor-default'); btn.classList.remove('hover:-translate-y-2');
-                            if (idx === q.correctIndex) {
-                                btn.classList.add('correct');
-                                btn.innerHTML = btn.innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="checkmark-circle" class="text-ios-green font-bold text-2xl sm:text-3xl"></ion-icon></div>');
-                            } else if (idx === answeredVal) {
-                                btn.classList.add('wrong');
-                                btn.innerHTML = btn.innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="close-circle" class="text-ios-red font-bold text-2xl sm:text-3xl"></ion-icon></div>');
-                            }
-                        } else {
-                            btn.onclick = () => app.handleAnswer(idx); 
-                        }
-                        optBox.appendChild(btn); 
-                    }); 
-                }
-                else if (q.type === 'tf') { 
-                    essayBox.classList.add('hidden'); optBox.classList.remove('hidden'); 
-                    const createTF = (text, val, idx) => { 
-                        const btn = document.createElement('button'); 
-                        btn.className = `ios-option w-full p-4 sm:p-6 text-center group animate-slide-up stagger-${idx+1}`; 
-                        btn.innerHTML = `<span class="text-xl sm:text-2xl font-black">${text}</span>`; 
-                        
+                            if (idx === q.correctIndex) { btn.classList.add('correct'); btn.innerHTML = btn.innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="checkmark-circle" class="text-ios-green font-bold text-2xl sm:text-3xl"></ion-icon></div>'); }
+                            else if (idx === answeredVal) { btn.classList.add('wrong'); btn.innerHTML = btn.innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="close-circle" class="text-ios-red font-bold text-2xl sm:text-3xl"></ion-icon></div>'); }
+                        } else { btn.onclick = () => app.handleAnswer(idx); }
+                        optBox.appendChild(btn);
+                    });
+                } else if (q.type === 'tf') {
+                    essayBox.classList.add('hidden'); optBox.classList.remove('hidden');
+                    const createTF = (text, val, idx) => {
+                        const btn = document.createElement('button');
+                        btn.className = `ios-option w-full p-4 sm:p-6 text-center group animate-slide-up stagger-${idx+1}`;
+                        btn.innerHTML = `<span class="text-xl sm:text-2xl font-black">${text}</span>`;
                         if (answeredVal !== undefined) {
                             btn.disabled = true; btn.classList.add('opacity-90', 'cursor-default'); btn.classList.remove('hover:-translate-y-2');
                             if (val === q.isTrue) btn.classList.add('correct');
                             else if (val === answeredVal) btn.classList.add('wrong');
-                        } else {
-                            btn.onclick = () => app.handleAnswer(val); 
-                        }
-                        optBox.appendChild(btn); 
-                    }; 
-                    createTF('صح', true, 1); createTF('خطأ', false, 2); 
-                }
-                else if (q.type === 'essay') { 
-                    optBox.classList.add('hidden'); essayBox.classList.remove('hidden'); 
-                    const textArea = document.getElementById('essay-answer');
-                    const submitBtn = document.getElementById('essay-submit-btn');
-                    if(answeredVal !== undefined) {
-                        textArea.value = answeredVal; textArea.disabled = true; submitBtn.classList.add('hidden');
-                    } else {
-                        textArea.value = ''; textArea.disabled = false; submitBtn.classList.remove('hidden');
-                    }
+                        } else { btn.onclick = () => app.handleAnswer(val); }
+                        optBox.appendChild(btn);
+                    };
+                    createTF('صح', true, 1); createTF('خطأ', false, 2);
+                } else if (q.type === 'essay') {
+                    optBox.classList.add('hidden'); essayBox.classList.remove('hidden');
+                    const textArea = document.getElementById('essay-answer'); const submitBtn = document.getElementById('essay-submit-btn');
+                    if (answeredVal !== undefined) { textArea.value = answeredVal; textArea.disabled = true; submitBtn.classList.add('hidden'); }
+                    else { textArea.value = ''; textArea.disabled = false; submitBtn.classList.remove('hidden'); }
                 }
 
-                const btnPrev = document.getElementById('btn-prev');
-                const btnNext = document.getElementById('btn-next');
-                
-                if (state.questionIndex === 0) { btnPrev.disabled = true; } else { btnPrev.disabled = false; }
-                
+                const btnPrev = document.getElementById('btn-prev'); const btnNext = document.getElementById('btn-next');
+                btnPrev.disabled = state.questionIndex === 0;
                 if (state.questionIndex === exam.questions.length - 1) {
                     btnNext.innerHTML = 'إنهاء التحدي <ion-icon name="checkmark-done"></ion-icon>';
                     btnNext.className = 'ios-btn bg-ios-green text-white py-3.5 sm:py-4 px-4 sm:px-12 text-sm sm:text-lg shadow-lg shadow-green-500/30 flex-1 sm:flex-none gap-1.5 sm:gap-2 transition-all hover:scale-[0.98]';
@@ -632,105 +790,99 @@
                     app.showFeedback(isCorrect, q, answeredVal, false);
                 }
             },
+
             handleAnswer: (selectedVal) => {
-                const state = appState.playerState; const q = appState.currentExam.questions[state.questionIndex]; 
-                if (state.answers[state.questionIndex] !== undefined) return; 
-
-                state.answers[state.questionIndex] = selectedVal; 
-
+                const state = appState.playerState; const q = appState.currentExam.questions[state.questionIndex];
+                if (state.answers[state.questionIndex] !== undefined) return;
+                state.answers[state.questionIndex] = selectedVal;
                 const btns = document.getElementById('options-container').querySelectorAll('.ios-option');
                 btns.forEach(b => { b.disabled = true; b.classList.add('opacity-90', 'cursor-default'); b.classList.remove('hover:-translate-y-2'); });
-                
                 let isCorrect = false;
-                if (q.type === 'mcq') { 
-                    isCorrect = (selectedVal === q.correctIndex); 
-                    btns[q.correctIndex].classList.add('correct'); 
-                    btns[q.correctIndex].innerHTML = btns[q.correctIndex].innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="checkmark-circle" class="text-ios-green font-bold text-2xl sm:text-3xl"></ion-icon></div>'); 
-                    if (isCorrect) btns[q.correctIndex].classList.add('animate-dynamic-pop'); 
-                    if (!isCorrect) { 
-                        btns[selectedVal].classList.add('wrong'); 
-                        btns[selectedVal].innerHTML = btns[selectedVal].innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="close-circle" class="text-ios-red font-bold text-2xl sm:text-3xl"></ion-icon></div>'); 
-                    } 
+                if (q.type === 'mcq') {
+                    isCorrect = (selectedVal === q.correctIndex);
+                    btns[q.correctIndex].classList.add('correct');
+                    btns[q.correctIndex].innerHTML = btns[q.correctIndex].innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="checkmark-circle" class="text-ios-green font-bold text-2xl sm:text-3xl"></ion-icon></div>');
+                    if (isCorrect) btns[q.correctIndex].classList.add('animate-dynamic-pop');
+                    if (!isCorrect) { btns[selectedVal].classList.add('wrong'); btns[selectedVal].innerHTML = btns[selectedVal].innerHTML.replace('border-[var(--text-muted)]', 'bg-transparent border-transparent').replace('</div>', '<ion-icon name="close-circle" class="text-ios-red font-bold text-2xl sm:text-3xl"></ion-icon></div>'); }
+                } else if (q.type === 'tf') {
+                    isCorrect = (selectedVal === q.isTrue); const correctBtnIndex = q.isTrue ? 0 : 1; const selectedBtnIndex = selectedVal ? 0 : 1;
+                    btns[correctBtnIndex].classList.add('correct'); if (isCorrect) btns[correctBtnIndex].classList.add('animate-dynamic-pop');
+                    if (!isCorrect) { btns[selectedBtnIndex].classList.add('wrong'); }
                 }
-                else if (q.type === 'tf') { 
-                    isCorrect = (selectedVal === q.isTrue); const correctBtnIndex = q.isTrue ? 0 : 1; const selectedBtnIndex = selectedVal ? 0 : 1; 
-                    btns[correctBtnIndex].classList.add('correct'); if (isCorrect) btns[correctBtnIndex].classList.add('animate-dynamic-pop'); 
-                    if (!isCorrect) { btns[selectedBtnIndex].classList.add('wrong'); } 
-                }
-                
-                if (isCorrect) { state.score++; state.correct++; ui.playSound('correct'); } else { state.wrong++; ui.playSound('wrong'); } 
+                if (isCorrect) { state.score++; state.correct++; ui.playSound('correct'); } else { state.wrong++; ui.playSound('wrong'); }
                 app.showFeedback(isCorrect, q, selectedVal, true);
             },
-            submitEssay: () => { 
-                const state = appState.playerState; if(state.answers[state.questionIndex] !== undefined) return;
-                const text = document.getElementById('essay-answer').value.trim(); 
-                if (!text) { ui.showToast('يرجى كتابة إجابة أولاً', 'error'); return; } 
+
+            submitEssay: () => {
+                const state = appState.playerState; if (state.answers[state.questionIndex] !== undefined) return;
+                const text = document.getElementById('essay-answer').value.trim();
+                if (!text) { ui.showToast('يرجى كتابة إجابة أولاً', 'error'); return; }
                 state.answers[state.questionIndex] = text; state.score++; state.correct++;
                 document.getElementById('essay-submit-btn').classList.add('hidden'); document.getElementById('essay-answer').disabled = true;
-                app.showFeedback(true, appState.currentExam.questions[state.questionIndex], text, true); 
+                app.showFeedback(true, appState.currentExam.questions[state.questionIndex], text, true);
             },
+
             showFeedback: (isCorrect, q, selectedVal, autoScroll = false) => {
-                const fbBox = document.getElementById('feedback-container'); const fbCard = document.getElementById('feedback-card'); const icon = document.getElementById('feedback-icon'); const title = document.getElementById('feedback-title'); const desc = document.getElementById('feedback-desc'); const analysis = document.getElementById('feedback-options-analysis');
-                fbBox.classList.remove('hidden'); analysis.classList.add('hidden'); analysis.innerHTML = ''; fbCard.className = 'ios-card border-2 p-5 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-5 transition-colors duration-300 overflow-hidden w-full min-w-0 ';
-                
-                if (q.type === 'essay') { 
-                    fbCard.classList.add('border-ios-purple', 'bg-purple-500/5'); icon.innerHTML = '<ion-icon name="bulb" class="text-ios-purple"></ion-icon>'; 
-                    title.innerText = 'الإجابة النموذجية'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-purple'; 
+                const fbBox = document.getElementById('feedback-container'); const fbCard = document.getElementById('feedback-card');
+                const icon = document.getElementById('feedback-icon'); const title = document.getElementById('feedback-title');
+                const desc = document.getElementById('feedback-desc'); const analysis = document.getElementById('feedback-options-analysis');
+                fbBox.classList.remove('hidden'); analysis.classList.add('hidden'); analysis.innerHTML = '';
+                fbCard.className = 'ios-card border-2 p-5 sm:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-5 transition-colors duration-300 overflow-hidden w-full min-w-0 ';
+
+                if (q.type === 'essay') {
+                    fbCard.classList.add('border-ios-purple', 'bg-purple-500/5');
+                    icon.innerHTML = '<ion-icon name="bulb" class="text-ios-purple"></ion-icon>';
+                    title.innerText = 'الإجابة النموذجية'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-purple';
                     const formattedAnswer = (q.modelAnswer || '').replace(/\n/g, '<br>');
-                    desc.innerHTML = `<div class="font-bold text-ios-text bg-[var(--card-bg)] p-4 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm border border-[var(--border-color)] text-sm sm:text-base overflow-x-auto" dir="auto" style="word-break:break-word;overflow-wrap:break-word;">${formattedAnswer}</div>`; 
-                    if (q.explanation) desc.innerHTML += `<div class="mt-4 sm:mt-5 text-xs sm:text-sm text-ios-gray flex gap-1.5 sm:gap-2 items-start"><ion-icon name="information-circle" class="text-lg sm:text-xl shrink-0 mt-0.5"></ion-icon><span>${q.explanation}</span></div>`; 
+                    desc.innerHTML = `<div class="font-bold text-ios-text bg-[var(--card-bg)] p-4 sm:p-5 rounded-xl sm:rounded-2xl shadow-sm border border-[var(--border-color)] text-sm sm:text-base overflow-x-auto" dir="auto" style="word-break:break-word;overflow-wrap:break-word;">${formattedAnswer}</div>`;
+                    if (q.explanation) desc.innerHTML += `<div class="mt-4 sm:mt-5 text-xs sm:text-sm text-ios-gray flex gap-1.5 sm:gap-2 items-start"><ion-icon name="information-circle" class="text-lg sm:text-xl shrink-0 mt-0.5"></ion-icon><span>${q.explanation}</span></div>`;
+                } else {
+                    if (isCorrect) { fbCard.classList.add('border-ios-green', 'bg-green-500/5'); icon.innerHTML = '<ion-icon name="checkmark-circle" class="text-ios-green"></ion-icon>'; title.innerText = 'إجابة صحيحة!'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-green'; }
+                    else { fbCard.classList.add('border-ios-red', 'bg-red-500/5'); icon.innerHTML = '<ion-icon name="close-circle" class="text-ios-red"></ion-icon>'; title.innerText = 'إجابة خاطئة'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-red'; }
+                    desc.innerText = q.explanation || 'لا يوجد تفسير إضافي.';
+                    if (q.type === 'mcq') {
+                        analysis.classList.remove('hidden');
+                        q.options.forEach((opt, idx) => {
+                            if (opt.explanation) {
+                                let indicator = (idx === q.correctIndex) ? '<ion-icon name="checkmark-circle" class="text-ios-green ml-1 sm:ml-2 text-base sm:text-lg"></ion-icon>' : ((idx === selectedVal && !isCorrect) ? '<ion-icon name="close-circle" class="text-ios-red ml-1 sm:ml-2 text-base sm:text-lg"></ion-icon>' : '');
+                                analysis.innerHTML += `<div class="bg-[var(--card-bg)] p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[var(--border-color)] text-xs sm:text-base"><div class="font-bold flex items-center mb-1 text-ios-text">${indicator} ${opt.text}</div><div class="text-ios-gray pr-5 sm:pr-7">${opt.explanation}</div></div>`;
+                            }
+                        });
+                    }
                 }
-                else { 
-                    if (isCorrect) { fbCard.classList.add('border-ios-green', 'bg-green-500/5'); icon.innerHTML = '<ion-icon name="checkmark-circle" class="text-ios-green"></ion-icon>'; title.innerText = 'إجابة صحيحة!'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-green'; } 
-                    else { fbCard.classList.add('border-ios-red', 'bg-red-500/5'); icon.innerHTML = '<ion-icon name="close-circle" class="text-ios-red"></ion-icon>'; title.innerText = 'إجابة خاطئة'; title.className = 'text-lg sm:text-2xl font-black mb-2 sm:mb-3 text-ios-red'; } 
-                    desc.innerText = q.explanation || 'لا يوجد تفسير إضافي.'; 
-                    if (q.type === 'mcq') { 
-                        analysis.classList.remove('hidden'); 
-                        q.options.forEach((opt, idx) => { 
-                            if (opt.explanation) { 
-                                let indicator = (idx === q.correctIndex) ? '<ion-icon name="checkmark-circle" class="text-ios-green ml-1 sm:ml-2 text-base sm:text-lg"></ion-icon>' : ((idx === selectedVal && !isCorrect) ? '<ion-icon name="close-circle" class="text-ios-red ml-1 sm:ml-2 text-base sm:text-lg"></ion-icon>' : ''); 
-                                analysis.innerHTML += `<div class="bg-[var(--card-bg)] p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-[var(--border-color)] text-xs sm:text-base"><div class="font-bold flex items-center mb-1 text-ios-text">${indicator} ${opt.text}</div><div class="text-ios-gray pr-5 sm:pr-7">${opt.explanation}</div></div>`; 
-                            } 
-                        }); 
-                    } 
-                }
-                
-                const srcHtml = [ q.sourceQuestion ? `<div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm bg-[var(--input-bg)] p-2.5 sm:p-3 rounded-lg sm:rounded-xl"><span class="shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-amber-500/20 text-amber-500 rounded-full flex items-center justify-center"><ion-icon name="location" class="text-sm sm:text-lg"></ion-icon></span><div><span class="font-bold text-ios-text block">السؤال: </span><span class="text-ios-gray">${q.sourceQuestion}</span></div></div>` : '', q.sourceAnswer ? `<div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm bg-[var(--input-bg)] p-2.5 sm:p-3 rounded-lg sm:rounded-xl"><span class="shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-green-500/20 text-ios-green rounded-full flex items-center justify-center"><ion-icon name="checkmark-done" class="text-sm sm:text-lg"></ion-icon></span><div><span class="font-bold text-ios-text block">الإجابة: </span><span class="text-ios-gray">${q.sourceAnswer}</span></div></div>` : '' ].filter(Boolean).join('');
+
+                const srcHtml = [
+                    q.sourceQuestion ? `<div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm bg-[var(--input-bg)] p-2.5 sm:p-3 rounded-lg sm:rounded-xl"><span class="shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-amber-500/20 text-amber-500 rounded-full flex items-center justify-center"><ion-icon name="location" class="text-sm sm:text-lg"></ion-icon></span><div><span class="font-bold text-ios-text block">السؤال: </span><span class="text-ios-gray">${q.sourceQuestion}</span></div></div>` : '',
+                    q.sourceAnswer  ? `<div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm bg-[var(--input-bg)] p-2.5 sm:p-3 rounded-lg sm:rounded-xl"><span class="shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-green-500/20 text-ios-green rounded-full flex items-center justify-center"><ion-icon name="checkmark-done" class="text-sm sm:text-lg"></ion-icon></span><div><span class="font-bold text-ios-text block">الإجابة: </span><span class="text-ios-gray">${q.sourceAnswer}</span></div></div>` : ''
+                ].filter(Boolean).join('');
                 const oldSrc = fbCard.querySelector('.source-refs'); if (oldSrc) oldSrc.remove();
                 if (srcHtml) { const srcEl = document.createElement('div'); srcEl.className = 'source-refs mx-3 sm:mx-8 mb-4 sm:mb-6 mt-3 sm:mt-4 space-y-2 sm:space-y-3'; srcEl.innerHTML = `<p class="text-[10px] sm:text-xs font-black text-ios-gray uppercase tracking-widest mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2"><ion-icon name="book"></ion-icon> المراجع العلمية</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">${srcHtml}</div>`; fbCard.appendChild(srcEl); }
-                
-                if(autoScroll) { setTimeout(() => fbBox.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); }
+
+                if (autoScroll) { setTimeout(() => fbBox.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); }
             },
-            nextQuestion: () => { 
-                appState.playerState.questionIndex++; 
-                app.renderQuestion(); 
-            },
-            prevQuestion: () => { 
-                if(appState.playerState.questionIndex > 0) {
-                    appState.playerState.questionIndex--; 
-                    app.renderQuestion();
-                }
-            },
+
+            nextQuestion: () => { appState.playerState.questionIndex++; app.renderQuestion(); },
+            prevQuestion: () => { if (appState.playerState.questionIndex > 0) { appState.playerState.questionIndex--; app.renderQuestion(); } },
+
             finishExam: async () => {
-                clearInterval(appState.playerState.timer); const state = appState.playerState; 
-                const totalQs = appState.currentExam.questions.filter(q => q.type !== 'essay').length; 
-                
+                clearInterval(appState.playerState.timer); const state = appState.playerState;
+                const totalQs = appState.currentExam.questions.filter(q => q.type !== 'essay').length;
                 const actualWrongOrMissed = totalQs > 0 ? (totalQs - state.correct) : 0;
                 let pct = totalQs > 0 ? Math.round((state.score / totalQs) * 100) : 100;
-                
-                document.getElementById('result-score').innerText = `${pct}%`; 
-                document.getElementById('result-correct').innerText = state.correct; 
+                document.getElementById('result-score').innerText = `${pct}%`;
+                document.getElementById('result-correct').innerText = state.correct;
                 document.getElementById('result-wrong').innerText = actualWrongOrMissed;
-                
-                const msgEl = document.getElementById('result-message'); 
+                const msgEl = document.getElementById('result-message');
                 if (pct >= 90) msgEl.innerText = "أداء استثنائي! أنت عبقري."; else if (pct >= 75) msgEl.innerText = "أداء ممتاز! استمر."; else if (pct >= 50) msgEl.innerText = "عمل جيد، يمكنك تقديم الأفضل."; else msgEl.innerText = "لا تستسلم! المحاولة القادمة أفضل.";
-                
                 ui.switchView('view-exam-results');
                 const resultId = 'res_' + Date.now() + Math.random().toString(36).substr(2, 5);
                 const payload = { id: resultId, userId: appState.user.uid, userName: appState.user.name, examId: appState.currentExam.id, examTitle: appState.currentExam.title, score: state.score, correct: state.correct, wrong: actualWrongOrMissed, percentage: pct, completedAt: Date.now() };
-                try { const localKey = `noor_results_${appState.user.uid}`; const existing = JSON.parse(localStorage.getItem(localKey) || '[]'); existing.unshift(payload); localStorage.setItem(localKey, JSON.stringify(existing)); } catch(le) {}
-                try { await setDoc(doc(db, "results", resultId), payload); app.loadStudentStats(); } catch (error) {}
+                // حفظ محلي فوري
+                try { const localKey = `noor_results_${appState.user.uid}`; const existing = JSON.parse(localStorage.getItem(localKey) || '[]'); existing.unshift(payload); localStorage.setItem(localKey, JSON.stringify(existing)); } catch {}
+                // ثم رفع للسيرفر
+                try { await setDoc(doc(db, "results", resultId), payload); app.loadStudentStats(); } catch {}
             },
+
             renderNotificationsList: () => {
                 const list = document.getElementById('notif-list');
                 if (appState.notifications.length === 0) { list.innerHTML = '<div class="text-center p-8 sm:p-10 text-ios-gray font-bold text-base sm:text-lg">لا توجد إشعارات حالياً.</div>'; return; }
